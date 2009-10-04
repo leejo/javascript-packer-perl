@@ -1,5 +1,17 @@
 Revision history for JavaScript-Packer
 
+0.03_01	2009-09-30
+	- Added object-oriented interface, examples in perldoc, support for
+	prototype.js' $super function
+	- Updated regular expressions based on the original regular
+	expressions in Dean Edwards' javascript libraries
+	- Adapted javascript parts to Dean Edwards' javascript libraries
+	- Replaced evals with subs
+	- The minify method returns a scalar if requested by context. Thanks
+	to Mary Shaw for suggestion
+	- Changed requirements to perl 5.10 to use named capture buffers in
+	regular expressions
+
 0.02	2009-04-10
 	- Changed version number
 

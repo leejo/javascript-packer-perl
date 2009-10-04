@@ -23,14 +23,16 @@ SKIP: {
 	fileTest( 's4', 'best', 'compression level "best" whith short javascript' );
 	fileTest( 's5', 'best', 'compression level "best" whith long javascript' );
 	
+	my $packer = JavaScript::Packer->init();
+	
 	my $var = 'var x = 2;';
-	JavaScript::Packer::minify( \$var );
+	$packer->minify( \$var );
 	is( $var, 'var x=2;', 'string literal input and ouput' );
 	$var = "var x = 2;\n;;;alert('hi');\nvar x = 2;";
-	JavaScript::Packer::minify( \$var );
+	$packer->minify( \$var );
 	is( $var, 'var x=2;var x=2;', 'scriptDebug option' );
 	$var = "var x = 2;";
-	JavaScript::Packer::minify( \$var, { 'copyright' => 'BSD' } );
+	$packer->minify( \$var, { 'copyright' => 'BSD' } );
 	is( $var, '/* BSD */var x=2;', 'copyright option');
 }
 
@@ -66,7 +68,10 @@ sub fileTest {
 	open(GOTFILE, '>t/scripts/' . $filename . '-got.js') or die("couldn't open file");
 	
 	my $js = join( '', <INFILE> );
-	JavaScript::Packer::minify( \$js, { 'compress' => $compress } );
+	
+	my $packer = JavaScript::Packer->init();
+	
+	$packer->minify( \$js, { 'compress' => $compress } );
 	print GOTFILE $js;
 	close(INFILE);
 	close(GOTFILE);
