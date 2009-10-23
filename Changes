@@ -1,5 +1,11 @@
 Revision history for JavaScript-Packer
 
+0.03_02 2009-10-21
+	- Added support for perl 5.8
+	- Changed requirements back to perl 5.8
+	- Bugfix in concat function
+	- Bugfix in shrink function
+
 0.03_01	2009-09-30
 	- Added object-oriented interface, examples in perldoc, support for
 	prototype.js' $super function

@@ -1,15 +1,22 @@
 package JavaScript::Packer;
 
-use 5.010;
+use 5.008;
 use warnings;
 use strict;
 use Carp;
+
+BEGIN {
+	if ( $^V lt 'v5.10.0' ) {
+		require re;
+		re->import( 'eval' );
+	}
+}
 
 use vars qw/$VERSION $MINIFY_VARS $SHRINK_VARS $BASE62_VARS $DICTIONARY $DATA $COMMENTS $WHITESPACE $CLEAN $TRIM/;
 
 # =========================================================================== #
 
-$VERSION = '0.03_01';
+$VERSION = '0.03_02';
 
 $MINIFY_VARS = {
 	'ESCAPE_BRACKETS'	=> qr~\(\?(-?[pmixs]+:|[:=!><])|\[[^\]]+\]~,
@@ -240,15 +247,18 @@ sub init {
 		unshift(
 			@{$self->{'concat'}->{'reggrp'}},
 			{
-				'regexp'	=> '(' . $DATA->[$i]->{'regexp'} . ')(?:\+(' . $DATA->[$i]->{'regexp'} . '))+',
+				'regexp'	=> '(' . $DATA->[$i]->{'regexp'} . ')((?:\+' . $DATA->[$i]->{'regexp'} . ')+)',
 				'replacement'	=> sub {
-					my $ret = substr( $_[1]->[0], 0, -1 );
-					if ( scalar( @{$_[1]} ) > 2 ) {
-						for ( my $i = 1; $i <= ( scalar( @{$_[1]} ) - 1 ); $i++ ) {
-							$ret .= substr( $_[1]->[0], 1, -1 );
-						}
+					my $submatches = $_[1];
+					my $ret = $submatches->[0];
+					
+					my $next_str = '^\+(' . $DATA->[0]->{'regexp'} . '|' . $DATA->[1]->{'regexp'} . ')';
+					
+					while ( my ( $next ) = $submatches->[1] =~ /$next_str/ ) {
+						chop( $ret );
+						$ret .= substr( $next, 1 );
+						$submatches->[1] =~ s/$next_str//;
 					}
-					$ret .= substr( $_[1]->[-1], 1 );
 					
 					return $ret;
 				}
@@ -279,8 +289,8 @@ sub init {
 		my $offset	= 1;
 		my $midx	= 0;
 		
-		$self->{$what}->{'re_str'} = '(' . join(
-			')|(',
+		$self->{$what}->{'re_str'} = ( ( $^V lt 'v5.10.0' ) ? '(?{ %+ = (); })' : '' ) . join(
+			'|',
 			map {
 				my $re = $_->{'regexp'};
 				$re =~ s/$MINIFY_VARS->{'ESCAPE_CHARS'}//g;
@@ -292,12 +302,22 @@ sub init {
 				
 				$re =~ s/$MINIFY_VARS->{'BACK_REF'}/sprintf( "\\%d", $offset + $1 )/eg;
 				
+				my $ret;
+				
+				if ( $^V lt 'v5.10.0' ) {
+					$ret = '(' . $re . ')' . '(?{ $+{\'_' . $midx++ . '\'} = $^N; })';
+# 					$ret = qr/$ret/;
+				}
+				else {
+					$ret = '(?\'_' . $midx++ . '\'' . $re . ')';
+				}
+				
 				$offset += scalar( @nparen ) + 1;
 				
-				'?\'_' . $midx++ . '\'' . $re;
+				$ret;
 				
 			} @{$self->{$what}->{'reggrp'}}
-		) . ')';
+		);
 	} ( 'comments', 'clean', 'whitespace', 'data_store', 'concat', 'trim' );
 	
 	$self->{'comments'}->{'reggrp'}->[-2]->{'replacement'} = sub {
@@ -362,6 +382,7 @@ sub minify {
 	}
 	
 	my $javascript	= \'';
+	#'
 	my $cont	= 'void';
 	
 	if ( defined( wantarray ) ) {
@@ -424,7 +445,7 @@ sub minify {
 			do {
 				$short_id = $self->_encode52( $cnt++ );
 			} while (
-				${$javascript} =~ /[^a-zA-Z0-9\\x24\.]\Q$short_id\E[^a-zA-Z0-9\\x24:]/
+				${$javascript} =~ /[^a-zA-Z0-9_\\x24\.]\Q$short_id\E[^a-zA-Z0-9_\\x24:]/
 			);
 			
 			${$javascript} =~ s/$shrunk_var/$short_id/g;
@@ -606,6 +627,7 @@ sub minify {
 			${$javascript} =~ s/$BASE62_VARS->{'WORDS'}/sprintf( "%s", $words->{$&}->{'encoded'} )/eg;
 			
 			${$javascript}	=~ s/([\\'])/\\$1/g;
+			#'
 			${$javascript}	=~ s/[\r\n]+/\\n/g;
 			
 			my $pp = ${$javascript};
@@ -696,11 +718,11 @@ sub _encode_shrink {
 						$cnt++;
 					}
 					
-					while ( $block =~ /[^a-zA-Z0-9\\x24\.]\Q$block_var\E[^a-zA-Z0-9\\x24:]/ ) {
-						$block =~ s/([^a-zA-Z0-9\\x24\.])\Q$block_var\E([^a-zA-Z0-9\\x24:])/sprintf( "%s\x02%d%s", $1, $cnt, $2 )/eg;
+					while ( $block =~ /[^a-zA-Z0-9_\\x24\.]\Q$block_var\E[^a-zA-Z0-9_\\x24:]/ ) {
+						$block =~ s/([^a-zA-Z0-9_\\x24\.])\Q$block_var\E([^a-zA-Z0-9_\\x24:])/sprintf( "%s\x02%d%s", $1, $cnt, $2 )/eg;
 					}
 					
-					$block =~ s/([{,a-zA-Z0-9\\x24.?])\Q$block_var\E:/sprintf( "%s\x02%d:", $1, $cnt )/eg;
+					$block =~ s/([^{,a-zA-Z0-9_\\x24\.])\Q$block_var\E:/sprintf( "%s\x02%d:", $1, $cnt )/eg;
 					
 					$cnt++;
 				}
@@ -760,7 +782,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 0.03_01
+Version 0.03_02
 
 =head1 DESCRIPTION
 
@@ -883,7 +905,7 @@ perldoc JavaScript::Packer
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2009 Merten Falk, all rights reserved.
+Copyright 2008, 2009 Merten Falk, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
