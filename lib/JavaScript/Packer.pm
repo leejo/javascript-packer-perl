@@ -16,7 +16,7 @@ use vars qw/$VERSION $MINIFY_VARS $SHRINK_VARS $BASE62_VARS $DICTIONARY $DATA $C
 
 # =========================================================================== #
 
-$VERSION = '0.03_02';
+$VERSION = '0.04';
 
 $MINIFY_VARS = {
 	'ESCAPE_BRACKETS'	=> qr~\(\?(-?[pmixs]+:|[:=!><])|\[[^\]]+\]~,
@@ -782,7 +782,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 0.03_02
+Version 0.04
 
 =head1 DESCRIPTION
 

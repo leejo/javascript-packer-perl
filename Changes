@@ -1,5 +1,8 @@
 Revision history for JavaScript-Packer
 
+0.04	2010-01-04
+	- Changed version number
+
 0.03_02 2009-10-21
 	- Added support for perl 5.8
 	- Changed requirements back to perl 5.8
