@@ -1,45 +1,53 @@
 Revision history for JavaScript-Packer
 
-0.04	2010-01-04
-	- Changed version number
+0.0402  2010-07-29
+    - Bugfix: Removed match variable from _process_minify()
+
+0.0401  2010-07-10
+    - Bugfix: Removed $& from module to increase speed.
+    Thanks to Graham Knop for suggestion
+    - Switched tabs to soft tabs
+
+0.04    2010-01-04
+    - Changed version number
 
 0.03_02 2009-10-21
-	- Added support for perl 5.8
-	- Changed requirements back to perl 5.8
-	- Bugfix in concat function
-	- Bugfix in shrink function
+    - Added support for perl 5.8
+    - Changed requirements back to perl 5.8
+    - Bugfix in concat function
+    - Bugfix in shrink function
 
-0.03_01	2009-09-30
-	- Added object-oriented interface, examples in perldoc, support for
-	prototype.js' $super function
-	- Updated regular expressions based on the original regular
-	expressions in Dean Edwards' javascript libraries
-	- Adapted javascript parts to Dean Edwards' javascript libraries
-	- Replaced evals with subs
-	- The minify method returns a scalar if requested by context. Thanks
-	to Mary Shaw for suggestion
-	- Changed requirements to perl 5.10 to use named capture buffers in
-	regular expressions
+0.03_01 2009-09-30
+    - Added object-oriented interface, examples in perldoc, support for
+    prototype.js' $super function
+    - Updated regular expressions based on the original regular
+    expressions in Dean Edwards' javascript libraries
+    - Adapted javascript parts to Dean Edwards' javascript libraries
+    - Replaced evals with subs
+    - The minify method returns a scalar if requested by context. Thanks
+    to Mary Shaw for suggestion
+    - Changed requirements to perl 5.10 to use named capture buffers in
+    regular expressions
 
-0.02	2009-04-10
-	- Changed version number
+0.02    2009-04-10
+    - Changed version number
 
-0.01_02	2009-03-16
-	- Bugfix
+0.01_02 2009-03-16
+    - Bugfix
 
-0.01_01	2009-03-15
-	- Changed compression level names
-	- Added compression level 'best'
-	- Updated some regular expressions
-	- Added some tests
-	
-0.0102	2008-11-24
-	- Former changes didn't work. Undone these changes. I'm sorry
-	for that. This will not happen again.
-	- Changed requirements to perl 5.8.
+0.01_01 2009-03-15
+    - Changed compression level names
+    - Added compression level 'best'
+    - Updated some regular expressions
+    - Added some tests
 
-0.0101	2008-11-20
-	Replaced int() by sprintf() for perl 5.6
+0.0102 2008-11-24
+    - Former changes didn't work. Undone these changes. I'm sorry
+    for that. This will not happen again.
+    - Changed requirements to perl 5.8.
 
-0.01	2008-11-15
-	First version, released on an unsuspecting world.
+0.0101  2008-11-20
+    Replaced int() by sprintf() for perl 5.6
+
+0.01    2008-11-15
+    First version, released on an unsuspecting world.

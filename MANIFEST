@@ -1,7 +1,10 @@
+.cvsignore
+.gitignore
 Changes
 lib/JavaScript/Packer.pm
 Makefile.PL
 MANIFEST
+META.yml
 README
 t/00-load.t
 t/01-io.t
@@ -16,4 +19,3 @@ t/scripts/s4-expected.js
 t/scripts/s4.js
 t/scripts/s5-expected.js
 t/scripts/s5.js
-META.yml                                 Module meta-data (added by MakeMaker)
