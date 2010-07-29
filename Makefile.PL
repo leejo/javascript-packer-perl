@@ -23,7 +23,6 @@ WriteMakefile(
         }
     },
     'dist'  => {
-        'TARFLAGS'  => '--owner=0 -cvf',
         'COMPRESS'  => 'gzip -9f',
         'SUFFIX' => 'gz'
     },
