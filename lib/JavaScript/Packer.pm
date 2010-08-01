@@ -317,7 +317,6 @@ sub init {
 
             } @{$self->{$what}->{'reggrp'}}
         );
-        print $self->{$what}->{'re_str'} . "\n" if ( $what eq 'whitespace' );
     } ( 'comments', 'clean', 'whitespace', 'data_store', 'concat', 'trim' );
 
     $self->{'comments'}->{'reggrp'}->[-2]->{'replacement'} = sub {
