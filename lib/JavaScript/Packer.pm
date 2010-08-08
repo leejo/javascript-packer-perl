@@ -4,28 +4,13 @@ use 5.008;
 use warnings;
 use strict;
 use Carp;
-
-BEGIN {
-    if ( $] < 5.010000 ) {
-        require re;
-        re->import( 'eval' );
-    }
-}
-
-use vars qw/$VERSION $MINIFY_VARS $SHRINK_VARS $BASE62_VARS $DICTIONARY $DATA $COMMENTS $WHITESPACE $CLEAN $TRIM/;
+use Regexp::RegGrp;
 
 # =========================================================================== #
 
-$VERSION = '0.0402';
+our $VERSION = '0.05_01';
 
-$MINIFY_VARS = {
-    'ESCAPE_BRACKETS'   => qr~\(\?(-?[pmixs]+:|[:=!><])|\[[^\]]+\]~,
-    'ESCAPE_CHARS'      => qr~\\.~,
-    'BRACKETS'          => qr~\(~,
-    'BACK_REF'          => qr~\\(\d+)~
-};
-
-$SHRINK_VARS = {
+our $SHRINK_VARS = {
     'ENCODED_DATA'  => qr~\x01(\d+)\x01~,
     'BLOCK'         => qr/(((catch|do|if|while|with|function)\b[^~{};]*(\(\s*[^{};]*\s*\))\s*)?(\{[^{}]*\}))/,
     'BRACKETS'      => qr/\{[^{}]*\}|\[[^\[\]]*\]|\([^\(\)]*\)|~[^~]+~/,
@@ -38,7 +23,7 @@ $SHRINK_VARS = {
     'SHRUNK'        => qr~\x02\d+\b~
 };
 
-$BASE62_VARS = {
+our $BASE62_VARS = {
     'WORDS'     => qr~(\b[0-9a-zA-Z]\b|(?>[a-zA-Z0-9_]{2,}))~,
     'ENCODE10'  => 'String',
     'ENCODE36'  => 'function(c){return c.toString(36)}',
@@ -46,7 +31,7 @@ $BASE62_VARS = {
     'UNPACK'    => q~eval(function(p,a,c,k,e,r){e=%s;if('0'.replace(0,e)==0){while(c--)r[e(c)]=k[c];k=[function(e){return r[e]||e}];e=function(){return'%s'};c=1};while(c--)if(k[c])p=p.replace(new RegExp('\\\\b'+e(c)+'\\\\b','g'),k[c]);return p}('%s',%s,%d,'%s'.split('|'),0,{}))~
 };
 
-$DICTIONARY = {
+our $DICTIONARY = {
     'STRING1'       => qr~"(?>(?:(?>[^"\\]+)|\\.|\\")*)"~,
     'STRING2'       => qr~'(?>(?:(?>[^'\\]+)|\\.|\\')*)'~,
     'REGEXP'        => qr~\/(\\[\/\\]|[^*\/])(\\.|[^\/\n\\])*\/[gim]*~,
@@ -56,41 +41,41 @@ $DICTIONARY = {
     'COMMENT2'      => qr~\/\*[^*]*\*+(?:[^\/][^*]*\*+)*\/~
 };
 
-$DATA = [
+our $DATA = [
     {
-        'regexp'        => $DICTIONARY->{'STRING1'},
+        'regexp'        => $DICTIONARY->{STRING1},
         'replacement'   => sub { return shift; }
     },
     {
-        'regexp'        => $DICTIONARY->{'STRING2'},
+        'regexp'        => $DICTIONARY->{STRING2},
         'replacement'   => sub { return shift; }
     },
     {
-        'regexp'        => $DICTIONARY->{'CONDITIONAL'},
+        'regexp'        => $DICTIONARY->{CONDITIONAL},
         'replacement'   => sub { return shift; }
     },
     {
-        'regexp'        => '(' . $DICTIONARY->{'OPERATOR'} . ')\s*(' . $DICTIONARY->{'REGEXP'} . ')',
+        'regexp'        => '(' . $DICTIONARY->{OPERATOR} . ')\s*(' . $DICTIONARY->{REGEXP} . ')',
         'replacement'   => sub { return sprintf( "%s%s", $_[1]->[0], $_[1]->[1] ); }
     }
 ];
 
-$COMMENTS = [
+our $COMMENTS = [
     {
         'regexp'        => ';;;[^\n]*\n',
         'replacement'   => ''
     },
     {
-        'regexp'        => $DICTIONARY->{'COMMENT1'} . '\s*(' . $DICTIONARY->{'REGEXP'} . ')?',
+        'regexp'        => $DICTIONARY->{COMMENT1} . '\s*(' . $DICTIONARY->{REGEXP} . ')?',
         'replacement'   => sub { return sprintf( "\n%s", $_[1]->[2] ); }
     },
     {
-        'regexp'        => '(' . $DICTIONARY->{'COMMENT2'} . ')\s*(' . $DICTIONARY->{'REGEXP'} . ')?',
+        'regexp'        => '(' . $DICTIONARY->{COMMENT2} . ')\s*(' . $DICTIONARY->{REGEXP} . ')?',
         'replacement'   => sub { return sprintf( " %s", $_[1]->[1] ); }
     }
 ];
 
-$CLEAN = [
+our $CLEAN = [
     {
         'regexp'        => '\(\s*([^;)]*)\s*;\s*([^;)]*)\s*;\s*([^;)]*)\)',
         'replacement'   => sub { return sprintf( "(%s;%s;%s)", @{$_[1]} ); }
@@ -105,7 +90,7 @@ $CLEAN = [
     }
 ];
 
-$WHITESPACE = [
+ our $WHITESPACE = [
     {
         'regexp'        => '\/\/@[^\n]*\n',
         'replacement'   => sub { return shift; }
@@ -148,7 +133,7 @@ $WHITESPACE = [
     }
 ];
 
-$TRIM = [
+ our $TRIM = [
     {
         'regexp'        => '(\d)(?:\|\d)+\|(\d)',
         'replacement'   => sub { return sprintf( "%d-%d", $_[1]->[0] || 0, $_[1]->[1] || 0 ); }
@@ -176,10 +161,10 @@ sub init {
 
         map {
             push(
-                @{$self->{$what}->{'reggrp'}},
+                @{$self->{$what}->{reggrp_data}},
                 {
-                    'regexp'        => $_->{'regexp'},
-                    'replacement'   => $_->{'replacement'}
+                    'regexp'        => $_->{regexp},
+                    'replacement'   => $_->{replacement}
                 }
             );
         } @$DATA;
@@ -187,10 +172,10 @@ sub init {
         if ( $what eq 'comments' ) {
             map {
                 push(
-                    @{$self->{'comments'}->{'reggrp'}},
+                    @{$self->{comments}->{reggrp_data}},
                     {
-                        'regexp'        => $_->{'regexp'},
-                        'replacement'   => $_->{'replacement'}
+                        'regexp'        => $_->{regexp},
+                        'replacement'   => $_->{replacement}
                     }
                 );
             } @$COMMENTS;
@@ -198,10 +183,10 @@ sub init {
         elsif ( $what eq 'clean' ) {
             map {
                 push(
-                    @{$self->{'clean'}->{'reggrp'}},
+                    @{$self->{clean}->{reggrp_data}},
                     {
-                        'regexp'        => $_->{'regexp'},
-                        'replacement'   => $_->{'replacement'}
+                        'regexp'        => $_->{regexp},
+                        'replacement'   => $_->{replacement}
                     }
                 );
             } @$CLEAN;
@@ -209,50 +194,47 @@ sub init {
         elsif ( $what eq 'whitespace' ) {
             map {
                 push(
-                    @{$self->{'whitespace'}->{'reggrp'}},
+                    @{$self->{whitespace}->{reggrp_data}},
                     {
-                        'regexp'        => $_->{'regexp'},
-                        'replacement'   => $_->{'replacement'}
+                        'regexp'        => $_->{regexp},
+                        'replacement'   => $_->{replacement}
                     }
                 );
             } @$WHITESPACE;
         }
     } ( 'comments', 'clean', 'whitespace', 'concat' );
 
-    splice( @{$self->{'comments'}->{'reggrp'}}, 2, 1 );
-    splice( @{$self->{'whitespace'}->{'reggrp'}}, 2, 1 );
-    splice( @{$self->{'concat'}->{'reggrp'}}, 2, 1 );
+    splice( @{$self->{comments}->{reggrp_data}}, 2, 1 );
+    splice( @{$self->{whitespace}->{reggrp_data}}, 2, 1 );
+    splice( @{$self->{concat}->{reggrp_data}}, 2, 1 );
 
     map {
         push(
-            @{$self->{'data_store'}->{'reggrp'}},
+            @{$self->{data_store}->{reggrp_data}},
             {
-                'regexp'        => $_->{'regexp'},
-                'replacement'   => sub {
-                    return sprintf( "\x01%d\x01", $_[2] );
-                },
-                'store'         => sub { return sprintf( "%s", $_[0] ); }
+                'regexp'    => $_->{regexp},
+                'store'     => sub { return sprintf( "%s", $_[0] ); }
             }
         );
     } @$DATA;
 
     for ( my $i = 1; $i >= 0; $i-- ) {
         unshift(
-            @{$self->{'concat'}->{'reggrp'}},
+            @{$self->{concat}->{reggrp_data}},
             {
-                'regexp'        => $DATA->[$i]->{'regexp'},
+                'regexp'        => $DATA->[$i]->{regexp},
                 'replacement'   => sub { return shift; }
             }
         );
         unshift(
-            @{$self->{'concat'}->{'reggrp'}},
+            @{$self->{concat}->{reggrp_data}},
             {
-                'regexp'        => '(' . $DATA->[$i]->{'regexp'} . ')((?:\+' . $DATA->[$i]->{'regexp'} . ')+)',
+                'regexp'        => '(' . $DATA->[$i]->{regexp} . ')((?:\+' . $DATA->[$i]->{regexp} . ')+)',
                 'replacement'   => sub {
                     my $submatches = $_[1];
                     my $ret = $submatches->[0];
 
-                    my $next_str = '^\+(' . $DATA->[0]->{'regexp'} . '|' . $DATA->[1]->{'regexp'} . ')';
+                    my $next_str = '^\+(' . $DATA->[0]->{regexp} . '|' . $DATA->[1]->{regexp} . ')';
 
                     while ( my ( $next ) = $submatches->[1] =~ /$next_str/ ) {
                         chop( $ret );
@@ -267,91 +249,71 @@ sub init {
     }
 
     push(
-        @{$self->{'concat'}->{'reggrp'}},
+        @{$self->{concat}->{reggrp_data}},
         {
-            'regexp'        => $DATA->[3]->{'regexp'},
-            'replacement'   => $DATA->[3]->{'replacement'}
+            'regexp'        => $DATA->[3]->{regexp},
+            'replacement'   => $DATA->[3]->{replacement}
         }
     );
 
     map {
         push(
-            @{$self->{'trim'}->{'reggrp'}},
+            @{$self->{trim}->{reggrp_data}},
             {
-                'regexp'        => $_->{'regexp'},
-                'replacement'   => $_->{'replacement'}
+                'regexp'        => $_->{regexp},
+                'replacement'   => $_->{replacement}
             }
         );
     } @$TRIM;
 
-    map {
-        my $what    = $_;
-        my $offset  = 1;
-        my $midx    = 0;
-
-        $self->{$what}->{'re_str'} = ( ( $] < 5.010000 ) ? '(?{ %+ = (); })' : '' ) . join(
-            '|',
-            map {
-                my $re = $_->{'regexp'};
-                $re =~ s/$MINIFY_VARS->{'ESCAPE_CHARS'}//g;
-                $re =~ s/$MINIFY_VARS->{'ESCAPE_BRACKETS'}//g;
-                my @nparen = $re =~ /$MINIFY_VARS->{'BRACKETS'}/g;
-                $_->{'regexp'} = qr/$_->{'regexp'}/;
-
-                $re = $_->{'regexp'};
-
-                $re =~ s/$MINIFY_VARS->{'BACK_REF'}/sprintf( "\\%d", $offset + $1 )/eg;
-
-                my $ret;
-
-                if ( $] < 5.010000 ) {
-                    $ret = '(' . $re . ')' . '(?{ $+{\'_' . $midx++ . '\'} = $^N; })';
-                }
-                else {
-                    $ret = '(?\'_' . $midx++ . '\'' . $re . ')';
-                }
-
-                $offset += scalar( @nparen ) + 1;
-
-                $ret;
-
-            } @{$self->{$what}->{'reggrp'}}
-        );
-    } ( 'comments', 'clean', 'whitespace', 'data_store', 'concat', 'trim' );
-
-    $self->{'comments'}->{'reggrp'}->[-2]->{'replacement'} = sub {
+    $self->{comments}->{reggrp_data}->[-2]->{replacement} = sub {
         if ( $_[1]->[0] eq '@' ) {
-            $_[1]->[1] =~ s/$self->{'comments'}->{'re_str'}/$self->_process_minify( 'comments', %+ )/egsm;
-            $_[1]->[1] =~ s/$self->{'clean'}->{'re_str'}/$self->_process_minify( 'clean', %+ )/egsm;
-            $_[1]->[1] =~ s/$self->{'whitespace'}->{'re_str'}/$self->_process_minify( 'whitespace', %+ )/egsm;
+            # I don't like this, but
+            # $self->{comments}->{reggrp}->exec( \$_[1]->[1] ); ...
+            # will not work. It isn't initialized jet.
+            # I someone has a better idea, please let me know
+            $self->_process_wrapper( 'comments', \$_[1]->[1] );
+            $self->_process_wrapper( 'clean', \$_[1]->[1] );
+            $self->_process_wrapper( 'whitespace', \$_[1]->[1] );
 
             return sprintf( "//%s%s\n%s", @{$_[1]} );
         }
         return sprintf( "\n%s", $_[1]->[2] );
     };
 
-    $self->{'comments'}->{'reggrp'}->[-1]->{'replacement'} = sub {
+    $self->{comments}->{reggrp_data}->[-1]->{replacement} = sub {
         if ( $_[1]->[0] =~ /^\/\*\@(.*)\@\*\/$/sm ) {
             my $cmnt = $1;
-            $cmnt =~ s/$self->{'comments'}->{'re_str'}/$self->_process_minify( 'comments', %+ )/egsm;
-            $cmnt =~ s/$self->{'clean'}->{'re_str'}/$self->_process_minify( 'clean', %+ )/egsm;
-            $cmnt =~ s/$self->{'whitespace'}->{'re_str'}/$self->_process_minify( 'whitespace', %+ )/egsm;
+            # Same as above
+            $self->_process_wrapper( 'comments', \$cmnt );
+            $self->_process_wrapper( 'clean', \$cmnt );
+            $self->_process_wrapper( 'whitespace', \$cmnt );
 
             return sprintf( '/*@%s@*/ %s', $cmnt, $_[1]->[1] );
         }
         return sprintf( " %s", $_[1]->[1] );
     };
 
-    $self->{'data_store'}->{'reggrp'}->[-1]->{'replacement'} = sub {
+    $self->{data_store}->{reggrp_data}->[-1]->{replacement} = sub {
         return sprintf( "%s\x01%d\x01", $_[1]->[0], $_[2] );
     };
 
-    $self->{'data_store'}->{'reggrp'}->[-1]->{'store'} = sub {
+    $self->{data_store}->{reggrp_data}->[-1]->{store} = sub {
         return $_[1]->[1];
     };
 
-    $self->{'store_data'} = [];
-    $self->{'block_data'} = [];
+    map {
+        $self->{$_}->{reggrp} = Regexp::RegGrp->new( { reggrp => $self->{$_}->{reggrp_data} } );
+    } ( 'comments', 'clean', 'whitespace', 'data_store', 'concat', 'trim' );
+
+    $self->{data_store}->{reggrp} = Regexp::RegGrp->new(
+        {
+            reggrp          => $self->{data_store}->{reggrp_data},
+            restore_pattern => $SHRINK_VARS->{ENCODED_DATA}
+        }
+    );
+
+    $self->{block_data} = [];
 
     bless( $self, $class );
 
@@ -398,44 +360,45 @@ sub minify {
         $opts = { 'compress' => 'clean', 'copyright' => '' };
     }
     else {
-        $opts->{'compress'} ||= 'clean';
+        $opts->{compress} ||= 'clean';
         unless (
             grep(
-                $_ eq $opts->{'compress'},
+                $_ eq $opts->{compress},
                 ( 'clean', 'minify', 'shrink', 'base62', 'obfuscate', 'best' )
             )
         ) {
-            $opts->{'compress'} = 'clean';
+            $opts->{compress} = 'clean';
         }
 
-        if ( $opts->{'compress'} eq 'minify' ) {
-            $opts->{'compress'} = 'clean';
+        if ( $opts->{compress} eq 'minify' ) {
+            $opts->{compress} = 'clean';
         }
-        elsif ( $opts->{'compress'} eq 'base62' ) {
-            $opts->{'compress'} = 'obfuscate';
+        elsif ( $opts->{compress} eq 'base62' ) {
+            $opts->{compress} = 'obfuscate';
         }
 
-        $opts->{'copyright'}    = ( $opts->{'copyright'} and $opts->{'compress'} eq 'clean' ) ? ( '/* ' . $opts->{'copyright'} . ' */' ) : '';
+        $opts->{copyright}    = ( $opts->{copyright} and $opts->{compress} eq 'clean' ) ? ( '/* ' . $opts->{copyright} . ' */' ) : '';
     }
 
     ${$javascript} =~ s/\r//gsm;
     ${$javascript} .= "\n";
 
-    ${$javascript} =~ s/$self->{'comments'}->{'re_str'}/$self->_process_minify( 'comments', %+ )/egsm;
-    ${$javascript} =~ s/$self->{'clean'}->{'re_str'}/$self->_process_minify( 'clean', %+ )/egsm;
-    ${$javascript} =~ s/$self->{'whitespace'}->{'re_str'}/$self->_process_minify( 'whitespace', %+ )/egsm;
-    ${$javascript} =~ s/$self->{'concat'}->{'re_str'}/$self->_process_minify( 'concat', %+ )/egsm;
 
-    if ( $opts->{'compress'} ne 'clean' ) {
-        ${$javascript} =~ s/$self->{'data_store'}->{'re_str'}/$self->_store_shrink( %+ )/egsm;
+    $self->{comments}->{reggrp}->exec( $javascript );
+    $self->{clean}->{reggrp}->exec( $javascript );
+    $self->{whitespace}->{reggrp}->exec( $javascript );
+    $self->{concat}->{reggrp}->exec( $javascript );
 
-        while( ${$javascript} =~ /$SHRINK_VARS->{'BLOCK'}/ ) {
-            ${$javascript} =~ s/$SHRINK_VARS->{'BLOCK'}/$self->_encode_shrink( $1 )/egsm;
+    if ( $opts->{compress} ne 'clean' ) {
+        $self->{data_store}->{reggrp}->exec( $javascript );
+
+        while( ${$javascript} =~ /$SHRINK_VARS->{BLOCK}/ ) {
+            ${$javascript} =~ s/$SHRINK_VARS->{BLOCK}/$self->_encode_shrink( $1 )/egsm;
         }
 
-        $self->_decode_shrink( $javascript, 'block_data', $SHRINK_VARS->{'ENCODED_BLOCK'} );
+        $self->_decode_shrink( $javascript, 'block_data', $SHRINK_VARS->{ENCODED_BLOCK} );
 
-        my %shrunk_vars = map { $_ => 1 } ( ${$javascript} =~ /$SHRINK_VARS->{'SHRUNK'}/g );
+        my %shrunk_vars = map { $_ => 1 } ( ${$javascript} =~ /$SHRINK_VARS->{SHRUNK}/g );
 
         my $cnt = 0;
         foreach my $shrunk_var ( keys( %shrunk_vars ) ) {
@@ -449,35 +412,34 @@ sub minify {
             ${$javascript} =~ s/$shrunk_var/$short_id/g;
         }
 
-        $self->_decode_shrink( $javascript, 'store_data', $SHRINK_VARS->{'ENCODED_DATA'} );
+        $self->{data_store}->{reggrp}->restore_stored( $javascript );
 
-        $self->{'store_data'} = [];
-        $self->{'block_data'} = [];
+        $self->{block_data} = [];
     }
     else {
-        ${$javascript} = $opts->{'copyright'} . ${$javascript} if ( $opts->{'copyright'} );
+        ${$javascript} = $opts->{copyright} . ${$javascript} if ( $opts->{copyright} );
     }
 
 
-    if ( $opts->{'compress'} eq 'obfuscate' or $opts->{'compress'} eq 'best' ) {
+    if ( $opts->{compress} eq 'obfuscate' or $opts->{compress} eq 'best' ) {
         my $words = {};
 
-        my @words = ${$javascript} =~ /$BASE62_VARS->{'WORDS'}/g;
+        my @words = ${$javascript} =~ /$BASE62_VARS->{WORDS}/g;
 
         my $idx = 0;
 
         map {
             if ( exists( $words->{$_} ) ) {
-                $words->{$_}->{'count'}++;
+                $words->{$_}->{count}++;
             }
             else {
-                $words->{$_}->{'count'} = 1;
+                $words->{$_}->{count} = 1;
             }
         } @words;
 
-        WORD: foreach my $word ( sort { $words->{$b}->{'count'} <=> $words->{$a}->{'count'} } keys( %{$words} ) ) {
+        WORD: foreach my $word ( sort { $words->{$b}->{count} <=> $words->{$a}->{count} } keys( %{$words} ) ) {
 
-            if ( exists( $words->{$word}->{'encoded'} ) and $words->{$word}->{'encoded'} eq $word ) {
+            if ( exists( $words->{$word}->{encoded} ) and $words->{$word}->{encoded} eq $word ) {
                 next WORD;
             }
 
@@ -485,23 +447,23 @@ sub minify {
 
             if ( exists( $words->{$encoded} ) ) {
                 my $next = 0;
-                if ( exists( $words->{$encoded}->{'encoded'} ) ) {
-                    $words->{$word}->{'encoded'} = $words->{$encoded}->{'encoded'};
-                    $words->{$word}->{'index'} = $words->{$encoded}->{'index'};
-                    $words->{$word}->{'minus'} = length( $word ) - length( $words->{$word}->{'encoded'} );
+                if ( exists( $words->{$encoded}->{encoded} ) ) {
+                    $words->{$word}->{encoded} = $words->{$encoded}->{encoded};
+                    $words->{$word}->{index} = $words->{$encoded}->{index};
+                    $words->{$word}->{minus} = length( $word ) - length( $words->{$word}->{encoded} );
                     $next = 1;
                 }
-                $words->{$encoded}->{'encoded'} = $encoded;
-                $words->{$encoded}->{'index'} = $idx;
-                $words->{$encoded}->{'minus'} = 0;
+                $words->{$encoded}->{encoded} = $encoded;
+                $words->{$encoded}->{index} = $idx;
+                $words->{$encoded}->{minus} = 0;
                 $idx++;
                 next WORD if ( $next );
                 redo WORD;
             }
 
-            $words->{$word}->{'encoded'} = $encoded;
-            $words->{$word}->{'index'} = $idx;
-            $words->{$word}->{'minus'} = length( $word ) - length( $encoded );
+            $words->{$word}->{encoded} = $encoded;
+            $words->{$word}->{index} = $idx;
+            $words->{$word}->{minus} = length( $word ) - length( $encoded );
 
             $idx++;
         }
@@ -512,14 +474,14 @@ sub minify {
 
         foreach (
             sort {
-                $words->{$a}->{'index'} <=> $words->{$b}->{'index'}
+                $words->{$a}->{index} <=> $words->{$b}->{index}
             } keys( %{$words} )
         ) {
-            $packed_length -= ( $words->{$_}->{'count'} * $words->{$_}->{'minus'} );
+            $packed_length -= ( $words->{$_}->{count} * $words->{$_}->{minus} );
 
-            if ( $words->{$_}->{'encoded'} ne $_ ) {
+            if ( $words->{$_}->{encoded} ne $_ ) {
                 push( @pk, $_ );
-                push( @pattern, $words->{$_}->{'encoded'} );
+                push( @pattern, $words->{$_}->{encoded} );
             }
             else {
                 push( @pk, '' );
@@ -533,7 +495,7 @@ sub minify {
 
         my $pd = join( '|', @pattern );
 
-        $pd =~ s/$self->{'trim'}->{'re_str'}/$self->_process_minify( 'trim', %+ )/egsm;
+        $self->{trim}->{reggrp}->exec( \$pd );
 
         unless ( $pd ) {
             $pd = '^$';
@@ -611,8 +573,8 @@ sub minify {
         $packed_length += length( $pe );
 
 
-        $packed_length += length( $BASE62_VARS->{'UNPACK'} );
-        $packed_length -= ( $BASE62_VARS->{'UNPACK'} =~ s/(%s|%d)/$1/g ) * 2;
+        $packed_length += length( $BASE62_VARS->{UNPACK} );
+        $packed_length -= ( $BASE62_VARS->{UNPACK} =~ s/(%s|%d)/$1/g ) * 2;
 
         map {
             $packed_length -= length( $_ ) - 3;
@@ -620,16 +582,16 @@ sub minify {
 
         $packed_length += ${$javascript} =~ tr/\\\'/\\\'/;
 
-        if ( $opts->{'compress'} eq 'obfuscate' or $packed_length <= length( ${$javascript} ) ) {
+        if ( $opts->{compress} eq 'obfuscate' or $packed_length <= length( ${$javascript} ) ) {
 
-            ${$javascript} =~ s/$BASE62_VARS->{'WORDS'}/sprintf( "%s", $words->{$1}->{'encoded'} )/eg;
+            ${$javascript} =~ s/$BASE62_VARS->{WORDS}/sprintf( "%s", $words->{$1}->{encoded} )/eg;
 
             ${$javascript}    =~ s/([\\'])/\\$1/g;
             ${$javascript}    =~ s/[\r\n]+/\\n/g;
 
             my $pp = ${$javascript};
 
-            ${$javascript} = sprintf( $BASE62_VARS->{'UNPACK'}, $pe, $pd, $pp, $pa, $pc, $pk );
+            ${$javascript} = sprintf( $BASE62_VARS->{UNPACK}, $pe, $pd, $pp, $pa, $pc, $pk );
         }
 
     }
@@ -637,40 +599,11 @@ sub minify {
     return ${$javascript} if ( $cont eq 'scalar' );
 }
 
-sub _process_minify {
-    my ( $self, $reg_name, %match_hash ) = @_;
+sub _process_wrapper {
+    my ( $self, $reg_name, $in ) = @_;
 
-    my $match_key   = ( keys( %match_hash ) )[0];
-    my ( $midx )    = $match_key =~ /^_(\d+)$/;
-    my $match       = $match_hash{$match_key};
-
-    my @submatches = $match =~ /$self->{$reg_name}->{'reggrp'}->[$midx]->{'regexp'}/;
-    map { $_ ||= ''; } @submatches;
-
-    return $self->{$reg_name}->{'reggrp'}->[$midx]->{'replacement'} unless ( ref( $self->{$reg_name}->{'reggrp'}->[$midx]->{'replacement'} ) );
-
-    return $self->{$reg_name}->{'reggrp'}->[$midx]->{'replacement'}->( $match, \@submatches ) if ( ref( $self->{$reg_name}->{'reggrp'}->[$midx]->{'replacement'} ) eq 'CODE' );
-
-    return $match;
-};
-
-sub _store_shrink {
-    my ( $self, %match_hash ) = @_;
-
-    my $match_key   = ( keys( %match_hash ) )[0];
-    my ( $midx )    = $match_key =~ /^_(\d+)$/;
-    my $match       = $match_hash{$match_key};
-
-    my @submatches = $match =~ /$self->{'data_store'}->{'reggrp'}->[$midx]->{'regexp'}/;
-    map { $_ ||= ''; } @submatches;
-
-    my $ret     = $self->{'data_store'}->{'reggrp'}->[$midx]->{'replacement'}->( $match, \@submatches, scalar( @{$self->{'store_data'}} ) );
-    my $store   = $self->{'data_store'}->{'reggrp'}->[$midx]->{'store'}->( $match, \@submatches );
-
-    push( @{$self->{'store_data'}}, $store );
-
-    return $ret;
-};
+    $self->{$reg_name}->{reggrp}->exec( $in );
+}
 
 sub _decode_shrink {
     my ( $self, $string_ref, $data_name, $pattern ) = @_;
@@ -683,7 +616,7 @@ sub _decode_shrink {
 sub _encode_shrink {
     my ( $self, $match ) = @_;
 
-    my ( undef, $prefix, $blocktype, $args, $block ) = $match =~ /$SHRINK_VARS->{'BLOCK'}/;
+    my ( undef, $prefix, $blocktype, $args, $block ) = $match =~ /$SHRINK_VARS->{BLOCK}/;
 
     $prefix ||= '';
     $blocktype ||= '';
@@ -691,12 +624,12 @@ sub _encode_shrink {
     my $replacement = '';
     if ( $blocktype eq 'function' ) {
 
-        $self->_decode_shrink( \$block, 'block_data', $SHRINK_VARS->{'SCOPED'} );
+        $self->_decode_shrink( \$block, 'block_data', $SHRINK_VARS->{SCOPED} );
 
         $args =~ s/\s*//g;
 
         $block = $args . $block;
-        $prefix =~ s/$SHRINK_VARS->{'BRACKETS'}//;
+        $prefix =~ s/$SHRINK_VARS->{BRACKETS}//;
 
         $args =~ s/^\(|\)$//g;
 
@@ -704,18 +637,18 @@ sub _encode_shrink {
         my $do_shrink = grep( $_ eq '_no_shrink_', split( /\s*,\s*/, $args ) ) ? 0 : 1;
 
         if ( $do_shrink ) {
-            %block_vars = map { $_ => 1 } ( $block =~ /$SHRINK_VARS->{'VARS'}/g ), grep( $_ ne '$super', split( /\s*,\s*/, $args ) );
+            %block_vars = map { $_ => 1 } ( $block =~ /$SHRINK_VARS->{VARS}/g ), grep( $_ ne '$super', split( /\s*,\s*/, $args ) );
         }
 
-        $self->_decode_shrink( \$block, 'block_data', $SHRINK_VARS->{'ENCODED_BLOCK'} );
+        $self->_decode_shrink( \$block, 'block_data', $SHRINK_VARS->{ENCODED_BLOCK} );
 
         if ( $do_shrink ) {
 
             my $cnt = 0;
             foreach my $block_var ( keys( %block_vars ) ) {
                 if ( length( $block_var ) ) {
-                    my $pattern = sprintf( "%s%d", $SHRINK_VARS->{'PREFIX'}, $cnt );
-                    while ( $block =~ /$SHRINK_VARS->{'PREFIX'}\Q$cnt\E\b/ ) {
+                    my $pattern = sprintf( "%s%d", $SHRINK_VARS->{PREFIX}, $cnt );
+                    while ( $block =~ /$SHRINK_VARS->{PREFIX}\Q$cnt\E\b/ ) {
                         $cnt++;
                     }
 
@@ -729,14 +662,14 @@ sub _encode_shrink {
                 }
             }
         }
-        $replacement = sprintf( "%s~%d~", $prefix, scalar( @{$self->{'block_data'}} ) );
+        $replacement = sprintf( "%s~%d~", $prefix, scalar( @{$self->{block_data}} ) );
 
-        push( @{$self->{'block_data'}}, $block );
+        push( @{$self->{block_data}}, $block );
     }
     else {
-        $replacement = sprintf( "~#%d~", scalar( @{$self->{'block_data'}} ) );
+        $replacement = sprintf( "~#%d~", scalar( @{$self->{block_data}} ) );
 
-        push( @{$self->{'block_data'}}, $prefix . $block );
+        push( @{$self->{block_data}}, $prefix . $block );
     }
 
     return $replacement;
@@ -783,7 +716,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 0.0402
+Version 0.05_01
 
 =head1 DESCRIPTION
 

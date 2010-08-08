@@ -1,5 +1,8 @@
 Revision history for JavaScript-Packer
 
+0.05_02 2010-08-06
+    - Moved regexp grouping stuff to Regexp::RegGrp
+
 0.0402  2010-07-29
     - Bugfix: Removed match variable from _process_minify()
 

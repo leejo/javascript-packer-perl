@@ -15,7 +15,8 @@ WriteMakefile(
     ),
     'PL_FILES'          => {},
     'PREREQ_PM'         => {
-        'Test::More'    => 0,
+        'Test::More'        => 0,
+        'Regexp::RegGrp'    => 0
     },
     'META_MERGE'        => {
         'resources'     => {
