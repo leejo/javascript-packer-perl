@@ -90,7 +90,7 @@ our $CLEAN = [
     }
 ];
 
- our $WHITESPACE = [
+our $WHITESPACE = [
     {
         'regexp'        => '\/\/@[^\n]*\n',
         'replacement'   => sub { return shift; }
