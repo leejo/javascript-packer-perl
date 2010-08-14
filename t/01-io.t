@@ -32,7 +32,7 @@ SKIP: {
     $packer->minify( \$var );
     is( $var, 'var x=2;var x=2;', 'scriptDebug option' );
     $var = "var x = 2;";
-    $packer->minify( \$var, { 'copyright' => 'BSD' } );
+    $packer->minify( \$var, { copyright => 'BSD' } );
     is( $var, '/* BSD */var x=2;', 'copyright option');
 }
 
@@ -71,7 +71,7 @@ sub fileTest {
 
     my $packer = JavaScript::Packer->init();
 
-    $packer->minify( \$js, { 'compress' => $compress } );
+    $packer->minify( \$js, { compress => $compress } );
     print GOTFILE $js;
     close(INFILE);
     close(GOTFILE);

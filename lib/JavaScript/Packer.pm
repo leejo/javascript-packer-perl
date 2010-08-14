@@ -11,144 +11,144 @@ use Regexp::RegGrp;
 our $VERSION = '0.05_01';
 
 our $SHRINK_VARS = {
-    'ENCODED_DATA'  => qr~\x01(\d+)\x01~,
-    'BLOCK'         => qr/(((catch|do|if|while|with|function)\b[^~{};]*(\(\s*[^{};]*\s*\))\s*)?(\{[^{}]*\}))/,
-    'BRACKETS'      => qr/\{[^{}]*\}|\[[^\[\]]*\]|\([^\(\)]*\)|~[^~]+~/,
-    'ENCODED_BLOCK' => qr/~#?(\d+)~/,
-    'IDENTIFIER'    => qr~[a-zA-Z_\x24][a-zA-Z_0-9\\x24]*~,
-    'SCOPED'        => qr/~#(\d+)~/,
-    'VAR'           => qr~\bvar\b~,
-    'VARS'          => qr~\b(?:var|function)\s+((?>[a-zA-Z0-9_\x24]+))~,
-    'PREFIX'        => qr~\x02~,
-    'SHRUNK'        => qr~\x02\d+\b~
+    ENCODED_DATA    => qr~\x01(\d+)\x01~,
+    BLOCK           => qr/(((catch|do|if|while|with|function)\b[^~{};]*(\(\s*[^{};]*\s*\))\s*)?(\{[^{}]*\}))/,
+    BRACKETS        => qr/\{[^{}]*\}|\[[^\[\]]*\]|\([^\(\)]*\)|~[^~]+~/,
+    ENCODED_BLOCK   => qr/~#?(\d+)~/,
+    IDENTIFIER      => qr~[a-zA-Z_\x24][a-zA-Z_0-9\\x24]*~,
+    SCOPED          => qr/~#(\d+)~/,
+    VAR             => qr~\bvar\b~,
+    VARS            => qr~\b(?:var|function)\s+((?>[a-zA-Z0-9_\x24]+))~,
+    PREFIX          => qr~\x02~,
+    SHRUNK          => qr~\x02\d+\b~
 };
 
 our $BASE62_VARS = {
-    'WORDS'     => qr~(\b[0-9a-zA-Z]\b|(?>[a-zA-Z0-9_]{2,}))~,
-    'ENCODE10'  => 'String',
-    'ENCODE36'  => 'function(c){return c.toString(36)}',
-    'ENCODE62'  => q~function(c){return(c<62?'':e(parseInt(c/62)))+((c=c%62)>35?String.fromCharCode(c+29):c.toString(36))}~,
-    'UNPACK'    => q~eval(function(p,a,c,k,e,r){e=%s;if('0'.replace(0,e)==0){while(c--)r[e(c)]=k[c];k=[function(e){return r[e]||e}];e=function(){return'%s'};c=1};while(c--)if(k[c])p=p.replace(new RegExp('\\\\b'+e(c)+'\\\\b','g'),k[c]);return p}('%s',%s,%d,'%s'.split('|'),0,{}))~
+    WORDS       => qr~(\b[0-9a-zA-Z]\b|(?>[a-zA-Z0-9_]{2,}))~,
+    ENCODE10    => 'String',
+    ENCODE36    => 'function(c){return c.toString(36)}',
+    ENCODE62    => q~function(c){return(c<62?'':e(parseInt(c/62)))+((c=c%62)>35?String.fromCharCode(c+29):c.toString(36))}~,
+    UNPACK      => q~eval(function(p,a,c,k,e,r){e=%s;if('0'.replace(0,e)==0){while(c--)r[e(c)]=k[c];k=[function(e){return r[e]||e}];e=function(){return'%s'};c=1};while(c--)if(k[c])p=p.replace(new RegExp('\\\\b'+e(c)+'\\\\b','g'),k[c]);return p}('%s',%s,%d,'%s'.split('|'),0,{}))~
 };
 
 our $DICTIONARY = {
-    'STRING1'       => qr~"(?>(?:(?>[^"\\]+)|\\.|\\")*)"~,
-    'STRING2'       => qr~'(?>(?:(?>[^'\\]+)|\\.|\\')*)'~,
-    'REGEXP'        => qr~\/(\\[\/\\]|[^*\/])(\\.|[^\/\n\\])*\/[gim]*~,
-    'OPERATOR'      => qr'return|typeof|[\[(\^=,{}:;&|!*?]',
-    'CONDITIONAL'   => qr~\/\*\@\w*|\w*\@\*\/|\/\/\@\w*|\@(?>\w+)~,
-    'COMMENT1'      => qr~\/\/(\@)?([^\n]*)?\n~,
-    'COMMENT2'      => qr~\/\*[^*]*\*+(?:[^\/][^*]*\*+)*\/~
+    STRING1     => qr~"(?>(?:(?>[^"\\]+)|\\.|\\")*)"~,
+    STRING2     => qr~'(?>(?:(?>[^'\\]+)|\\.|\\')*)'~,
+    REGEXP      => qr~\/(\\[\/\\]|[^*\/])(\\.|[^\/\n\\])*\/[gim]*~,
+    OPERATOR    => qr'return|typeof|[\[(\^=,{}:;&|!*?]',
+    CONDITIONAL => qr~\/\*\@\w*|\w*\@\*\/|\/\/\@\w*|\@(?>\w+)~,
+    COMMENT1    => qr~\/\/(\@)?([^\n]*)?\n~,
+    COMMENT2    => qr~\/\*[^*]*\*+(?:[^\/][^*]*\*+)*\/~
 };
 
 our $DATA = [
     {
-        'regexp'        => $DICTIONARY->{STRING1},
-        'replacement'   => sub { return shift; }
+        regexp      => $DICTIONARY->{STRING1},
+        replacement => sub { return shift; }
     },
     {
-        'regexp'        => $DICTIONARY->{STRING2},
-        'replacement'   => sub { return shift; }
+        regexp      => $DICTIONARY->{STRING2},
+        replacement => sub { return shift; }
     },
     {
-        'regexp'        => $DICTIONARY->{CONDITIONAL},
-        'replacement'   => sub { return shift; }
+        regexp      => $DICTIONARY->{CONDITIONAL},
+        replacement => sub { return shift; }
     },
     {
-        'regexp'        => '(' . $DICTIONARY->{OPERATOR} . ')\s*(' . $DICTIONARY->{REGEXP} . ')',
-        'replacement'   => sub { return sprintf( "%s%s", $_[1]->[0], $_[1]->[1] ); }
+        regexp      => '(' . $DICTIONARY->{OPERATOR} . ')\s*(' . $DICTIONARY->{REGEXP} . ')',
+        replacement => sub { return sprintf( "%s%s", $_[1]->[0], $_[1]->[1] ); }
     }
 ];
 
 our $COMMENTS = [
     {
-        'regexp'        => ';;;[^\n]*\n',
-        'replacement'   => ''
+        regexp      => ';;;[^\n]*\n',
+        replacement => ''
     },
     {
-        'regexp'        => $DICTIONARY->{COMMENT1} . '\s*(' . $DICTIONARY->{REGEXP} . ')?',
-        'replacement'   => sub { return sprintf( "\n%s", $_[1]->[2] ); }
+        regexp      => $DICTIONARY->{COMMENT1} . '\s*(' . $DICTIONARY->{REGEXP} . ')?',
+        replacement => sub { return sprintf( "\n%s", $_[1]->[2] ); }
     },
     {
-        'regexp'        => '(' . $DICTIONARY->{COMMENT2} . ')\s*(' . $DICTIONARY->{REGEXP} . ')?',
-        'replacement'   => sub { return sprintf( " %s", $_[1]->[1] ); }
+        regexp      => '(' . $DICTIONARY->{COMMENT2} . ')\s*(' . $DICTIONARY->{REGEXP} . ')?',
+        replacement => sub { return sprintf( " %s", $_[1]->[1] ); }
     }
 ];
 
 our $CLEAN = [
     {
-        'regexp'        => '\(\s*([^;)]*)\s*;\s*([^;)]*)\s*;\s*([^;)]*)\)',
-        'replacement'   => sub { return sprintf( "(%s;%s;%s)", @{$_[1]} ); }
+        regexp      => '\(\s*([^;)]*)\s*;\s*([^;)]*)\s*;\s*([^;)]*)\)',
+        replacement => sub { return sprintf( "(%s;%s;%s)", @{$_[1]} ); }
     },
     {
-        'regexp'        => 'throw[^};]+[};]',
-        'replacement'   => sub { return shift; }
+        regexp      => 'throw[^};]+[};]',
+        replacement => sub { return shift; }
     },
     {
-        'regexp'        => ';+\s*([};])',
-        'replacement'   => sub { return $_[1]->[0]; }
+        regexp      => ';+\s*([};])',
+        replacement => sub { return $_[1]->[0]; }
     }
 ];
 
 our $WHITESPACE = [
     {
-        'regexp'        => '\/\/@[^\n]*\n',
-        'replacement'   => sub { return shift; }
+        regexp      => '\/\/@[^\n]*\n',
+        replacement => sub { return shift; }
     },
     {
-        'regexp'        => '@\s+\b',
-        'replacement'   => '@ '
+        regexp      => '@\s+\b',
+        replacement => '@ '
     },
     {
-        'regexp'        => '\b\s+@',
-        'replacement'   => ' @'
+        regexp      => '\b\s+@',
+        replacement => ' @'
     },
     {
-        'regexp'        => '(\d)\s+(\.\s*[a-z\x24_\[(])',
-        'replacement'   => sub { return sprintf( "%s %s", @{$_[1]} ); }
+        regexp      => '(\d)\s+(\.\s*[a-z\x24_\[(])',
+        replacement => sub { return sprintf( "%s %s", @{$_[1]} ); }
     },
     {
-        'regexp'        => '([+-])\s+([+-])',
-        'replacement'   => sub { return sprintf( "%s %s", @{$_[1]} ); }
+        regexp      => '([+-])\s+([+-])',
+        replacement => sub { return sprintf( "%s %s", @{$_[1]} ); }
     },
     {
-        'regexp'        => '(?>\s+)(\x24)(?>\s+)',
-        'replacement'   => sub { return sprintf( " %s ", $_[1]->[0] ); }
+        regexp      => '(?>\s+)(\x24)(?>\s+)',
+        replacement => sub { return sprintf( " %s ", $_[1]->[0] ); }
     },
     {
-        'regexp'        => '(\x24)(?>\s+)(?!=)',
-        'replacement'   => sub { return sprintf( "%s ", $_[1]->[0] ); }
+        regexp      => '(\x24)(?>\s+)(?!=)',
+        replacement => sub { return sprintf( "%s ", $_[1]->[0] ); }
     },
     {
-        'regexp'        => '(?<!=)(?>\s+)(\x24)',
-        'replacement'   => sub { return sprintf( " %s", $_[1]->[0] ); }
+        regexp      => '(?<!=)(?>\s+)(\x24)',
+        replacement => sub { return sprintf( " %s", $_[1]->[0] ); }
     },
     {
-        'regexp'        => '\b\s+\b',
-        'replacement'   => ' '
+        regexp      => '\b\s+\b',
+        replacement => ' '
     },
     {
-        'regexp'        => '\s+',
-        'replacement'   => ''
+        regexp      => '\s+',
+        replacement => ''
     }
 ];
 
  our $TRIM = [
     {
-        'regexp'        => '(\d)(?:\|\d)+\|(\d)',
-        'replacement'   => sub { return sprintf( "%d-%d", $_[1]->[0] || 0, $_[1]->[1] || 0 ); }
+        regexp      => '(\d)(?:\|\d)+\|(\d)',
+        replacement => sub { return sprintf( "%d-%d", $_[1]->[0] || 0, $_[1]->[1] || 0 ); }
     },
     {
-        'regexp'        => '([a-z])(?:\|[a-z])+\|([a-z])',
-        'replacement'   => sub { return sprintf( "%s-%s", $_[1]->[0], $_[1]->[1] ); }
+        regexp      => '([a-z])(?:\|[a-z])+\|([a-z])',
+        replacement => sub { return sprintf( "%s-%s", $_[1]->[0], $_[1]->[1] ); }
     },
     {
-        'regexp'        => '([A-Z])(?:\|[A-Z])+\|([A-Z])',
-        'replacement'   => sub { return sprintf( "%s-%s", $_[1]->[0], $_[1]->[1] ); }
+        regexp      => '([A-Z])(?:\|[A-Z])+\|([A-Z])',
+        replacement => sub { return sprintf( "%s-%s", $_[1]->[0], $_[1]->[1] ); }
     },
     {
-        'regexp'        => '\|',
-        'replacement'   => ''
+        regexp      => '\|',
+        replacement => ''
     }
 ];
 
@@ -163,8 +163,8 @@ sub init {
             push(
                 @{$self->{$what}->{reggrp_data}},
                 {
-                    'regexp'        => $_->{regexp},
-                    'replacement'   => $_->{replacement}
+                    regexp      => $_->{regexp},
+                    replacement => $_->{replacement}
                 }
             );
         } @$DATA;
@@ -174,8 +174,8 @@ sub init {
                 push(
                     @{$self->{comments}->{reggrp_data}},
                     {
-                        'regexp'        => $_->{regexp},
-                        'replacement'   => $_->{replacement}
+                        regexp      => $_->{regexp},
+                        replacement => $_->{replacement}
                     }
                 );
             } @$COMMENTS;
@@ -185,8 +185,8 @@ sub init {
                 push(
                     @{$self->{clean}->{reggrp_data}},
                     {
-                        'regexp'        => $_->{regexp},
-                        'replacement'   => $_->{replacement}
+                        regexp      => $_->{regexp},
+                        replacement => $_->{replacement}
                     }
                 );
             } @$CLEAN;
@@ -196,8 +196,8 @@ sub init {
                 push(
                     @{$self->{whitespace}->{reggrp_data}},
                     {
-                        'regexp'        => $_->{regexp},
-                        'replacement'   => $_->{replacement}
+                        regexp      => $_->{regexp},
+                        replacement => $_->{replacement}
                     }
                 );
             } @$WHITESPACE;
@@ -212,8 +212,8 @@ sub init {
         push(
             @{$self->{data_store}->{reggrp_data}},
             {
-                'regexp'    => $_->{regexp},
-                'store'     => sub { return sprintf( "%s", $_[0] ); }
+                regexp  => $_->{regexp},
+                store   => sub { return sprintf( "%s", $_[0] ); }
             }
         );
     } @$DATA;
@@ -222,15 +222,15 @@ sub init {
         unshift(
             @{$self->{concat}->{reggrp_data}},
             {
-                'regexp'        => $DATA->[$i]->{regexp},
-                'replacement'   => sub { return shift; }
+                regexp      => $DATA->[$i]->{regexp},
+                replacement => sub { return shift; }
             }
         );
         unshift(
             @{$self->{concat}->{reggrp_data}},
             {
-                'regexp'        => '(' . $DATA->[$i]->{regexp} . ')((?:\+' . $DATA->[$i]->{regexp} . ')+)',
-                'replacement'   => sub {
+                regexp      => '(' . $DATA->[$i]->{regexp} . ')((?:\+' . $DATA->[$i]->{regexp} . ')+)',
+                replacement => sub {
                     my $submatches = $_[1];
                     my $ret = $submatches->[0];
 
@@ -251,8 +251,8 @@ sub init {
     push(
         @{$self->{concat}->{reggrp_data}},
         {
-            'regexp'        => $DATA->[3]->{regexp},
-            'replacement'   => $DATA->[3]->{replacement}
+            regexp      => $DATA->[3]->{regexp},
+            replacement => $DATA->[3]->{replacement}
         }
     );
 
@@ -260,8 +260,8 @@ sub init {
         push(
             @{$self->{trim}->{reggrp_data}},
             {
-                'regexp'        => $_->{regexp},
-                'replacement'   => $_->{replacement}
+                regexp      => $_->{regexp},
+                replacement => $_->{replacement}
             }
         );
     } @$TRIM;
@@ -271,7 +271,7 @@ sub init {
             # I don't like this, but
             # $self->{comments}->{reggrp}->exec( \$_[1]->[1] ); ...
             # will not work. It isn't initialized jet.
-            # I someone has a better idea, please let me know
+            # If someone has a better idea, please let me know
             $self->_process_wrapper( 'comments', \$_[1]->[1] );
             $self->_process_wrapper( 'clean', \$_[1]->[1] );
             $self->_process_wrapper( 'whitespace', \$_[1]->[1] );
@@ -357,7 +357,7 @@ sub minify {
 
     if ( ref( $opts ) ne 'HASH' ) {
         carp( 'Second argument must be a hashref of options! Using defaults!' ) if ( $opts );
-        $opts = { 'compress' => 'clean', 'copyright' => '' };
+        $opts = { compress => 'clean', copyright => '' };
     }
     else {
         $opts->{compress} ||= 'clean';
@@ -788,7 +788,7 @@ Common usage.
 
     my $js = join( '', <UNCOMPRESSED> );
 
-    $packer->minify( \$js, { 'compress' => 'best' } );
+    $packer->minify( \$js, { compress => 'best' } );
 
     print COMPRESSED $js;
     close(UNCOMPRESSED);
@@ -812,7 +812,7 @@ A scalar is requested by the context. The input will remain unchanged.
 
     my $uncompressed = join( '', <UNCOMPRESSED> );
 
-    my $compressed = $packer->minify( \$uncompressed, { 'compress' => 'best' } );
+    my $compressed = $packer->minify( \$uncompressed, { compress => 'best' } );
 
     print COMPRESSED $compressed;
     close(UNCOMPRESSED);
