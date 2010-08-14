@@ -43,20 +43,19 @@ our $DICTIONARY = {
 
 our $DATA = [
     {
-        regexp      => $DICTIONARY->{STRING1},
-        replacement => sub { return shift; }
+        regexp      => $DICTIONARY->{STRING1}
     },
     {
-        regexp      => $DICTIONARY->{STRING2},
-        replacement => sub { return shift; }
+        regexp      => $DICTIONARY->{STRING2}
     },
     {
-        regexp      => $DICTIONARY->{CONDITIONAL},
-        replacement => sub { return shift; }
+        regexp      => $DICTIONARY->{CONDITIONAL}
     },
     {
         regexp      => '(' . $DICTIONARY->{OPERATOR} . ')\s*(' . $DICTIONARY->{REGEXP} . ')',
-        replacement => sub { return sprintf( "%s%s", $_[1]->[0], $_[1]->[1] ); }
+        replacement => sub {
+            return sprintf( "%s%s", $_[0]->{submatches}->[0], $_[0]->{submatches}->[1] );
+        }
     }
 ];
 
@@ -67,33 +66,31 @@ our $COMMENTS = [
     },
     {
         regexp      => $DICTIONARY->{COMMENT1} . '\s*(' . $DICTIONARY->{REGEXP} . ')?',
-        replacement => sub { return sprintf( "\n%s", $_[1]->[2] ); }
+        replacement => sub { return sprintf( "\n%s", $_[0]->{submatches}->[2] ); }
     },
     {
         regexp      => '(' . $DICTIONARY->{COMMENT2} . ')\s*(' . $DICTIONARY->{REGEXP} . ')?',
-        replacement => sub { return sprintf( " %s", $_[1]->[1] ); }
+        replacement => sub { return sprintf( " %s", $_[0]->{submatches}->[1] ); }
     }
 ];
 
 our $CLEAN = [
     {
         regexp      => '\(\s*([^;)]*)\s*;\s*([^;)]*)\s*;\s*([^;)]*)\)',
-        replacement => sub { return sprintf( "(%s;%s;%s)", @{$_[1]} ); }
+        replacement => sub { return sprintf( "(%s;%s;%s)", @{$_[0]->{submatches}} ); }
     },
     {
-        regexp      => 'throw[^};]+[};]',
-        replacement => sub { return shift; }
+        regexp      => 'throw[^};]+[};]'
     },
     {
         regexp      => ';+\s*([};])',
-        replacement => sub { return $_[1]->[0]; }
+        replacement => sub { return $_[0]->{submatches}->[0]; }
     }
 ];
 
 our $WHITESPACE = [
     {
-        regexp      => '\/\/@[^\n]*\n',
-        replacement => sub { return shift; }
+        regexp      => '\/\/@[^\n]*\n'
     },
     {
         regexp      => '@\s+\b',
@@ -105,23 +102,23 @@ our $WHITESPACE = [
     },
     {
         regexp      => '(\d)\s+(\.\s*[a-z\x24_\[(])',
-        replacement => sub { return sprintf( "%s %s", @{$_[1]} ); }
+        replacement => sub { return sprintf( "%s %s", @{$_[0]->{submatches}} ); }
     },
     {
         regexp      => '([+-])\s+([+-])',
-        replacement => sub { return sprintf( "%s %s", @{$_[1]} ); }
+        replacement => sub { return sprintf( "%s %s", @{$_[0]->{submatches}} ); }
     },
     {
         regexp      => '(?>\s+)(\x24)(?>\s+)',
-        replacement => sub { return sprintf( " %s ", $_[1]->[0] ); }
+        replacement => sub { return sprintf( " %s ", $_[0]->{submatches}->[0] ); }
     },
     {
         regexp      => '(\x24)(?>\s+)(?!=)',
-        replacement => sub { return sprintf( "%s ", $_[1]->[0] ); }
+        replacement => sub { return sprintf( "%s ", $_[0]->{submatches}->[0] ); }
     },
     {
         regexp      => '(?<!=)(?>\s+)(\x24)',
-        replacement => sub { return sprintf( " %s", $_[1]->[0] ); }
+        replacement => sub { return sprintf( " %s", $_[0]->{submatches}->[0] ); }
     },
     {
         regexp      => '\b\s+\b',
@@ -136,15 +133,15 @@ our $WHITESPACE = [
  our $TRIM = [
     {
         regexp      => '(\d)(?:\|\d)+\|(\d)',
-        replacement => sub { return sprintf( "%d-%d", $_[1]->[0] || 0, $_[1]->[1] || 0 ); }
+        replacement => sub { return sprintf( "%d-%d", $_[0]->{submatches}->[0] || 0, $_[0]->{submatches}->[1] || 0 ); }
     },
     {
         regexp      => '([a-z])(?:\|[a-z])+\|([a-z])',
-        replacement => sub { return sprintf( "%s-%s", $_[1]->[0], $_[1]->[1] ); }
+        replacement => sub { return sprintf( "%s-%s", $_[0]->{submatches}->[0], $_[0]->{submatches}->[1] ); }
     },
     {
         regexp      => '([A-Z])(?:\|[A-Z])+\|([A-Z])',
-        replacement => sub { return sprintf( "%s-%s", $_[1]->[0], $_[1]->[1] ); }
+        replacement => sub { return sprintf( "%s-%s", $_[0]->{submatches}->[0], $_[0]->{submatches}->[1] ); }
     },
     {
         regexp      => '\|',
@@ -213,7 +210,7 @@ sub init {
             @{$self->{data_store}->{reggrp_data}},
             {
                 regexp  => $_->{regexp},
-                store   => sub { return sprintf( "%s", $_[0] ); }
+                store   => sub { return sprintf( "%s", $_[0]->{match} ); }
             }
         );
     } @$DATA;
@@ -222,8 +219,7 @@ sub init {
         unshift(
             @{$self->{concat}->{reggrp_data}},
             {
-                regexp      => $DATA->[$i]->{regexp},
-                replacement => sub { return shift; }
+                regexp => $DATA->[$i]->{regexp}
             }
         );
         unshift(
@@ -231,7 +227,7 @@ sub init {
             {
                 regexp      => '(' . $DATA->[$i]->{regexp} . ')((?:\+' . $DATA->[$i]->{regexp} . ')+)',
                 replacement => sub {
-                    my $submatches = $_[1];
+                    my $submatches = $_[0]->{submatches};
                     my $ret = $submatches->[0];
 
                     my $next_str = '^\+(' . $DATA->[0]->{regexp} . '|' . $DATA->[1]->{regexp} . ')';
@@ -267,39 +263,41 @@ sub init {
     } @$TRIM;
 
     $self->{comments}->{reggrp_data}->[-2]->{replacement} = sub {
-        if ( $_[1]->[0] eq '@' ) {
+        my $submatches = $_[0]->{submatches};
+        if ( $submatches->[0] eq '@' ) {
             # I don't like this, but
             # $self->{comments}->{reggrp}->exec( \$_[1]->[1] ); ...
             # will not work. It isn't initialized jet.
             # If someone has a better idea, please let me know
-            $self->_process_wrapper( 'comments', \$_[1]->[1] );
-            $self->_process_wrapper( 'clean', \$_[1]->[1] );
-            $self->_process_wrapper( 'whitespace', \$_[1]->[1] );
+            $self->_process_wrapper( 'comments', \$submatches->[1] );
+            $self->_process_wrapper( 'clean', \$submatches->[1] );
+            $self->_process_wrapper( 'whitespace', \$submatches->[1] );
 
-            return sprintf( "//%s%s\n%s", @{$_[1]} );
+            return sprintf( "//%s%s\n%s", @{$submatches} );
         }
-        return sprintf( "\n%s", $_[1]->[2] );
+        return sprintf( "\n%s", $submatches->[2] );
     };
 
     $self->{comments}->{reggrp_data}->[-1]->{replacement} = sub {
-        if ( $_[1]->[0] =~ /^\/\*\@(.*)\@\*\/$/sm ) {
+        my $submatches = $_[0]->{submatches};
+        if ( $submatches->[0] =~ /^\/\*\@(.*)\@\*\/$/sm ) {
             my $cmnt = $1;
             # Same as above
             $self->_process_wrapper( 'comments', \$cmnt );
             $self->_process_wrapper( 'clean', \$cmnt );
             $self->_process_wrapper( 'whitespace', \$cmnt );
 
-            return sprintf( '/*@%s@*/ %s', $cmnt, $_[1]->[1] );
+            return sprintf( '/*@%s@*/ %s', $cmnt, $submatches->[1] );
         }
-        return sprintf( " %s", $_[1]->[1] );
+        return sprintf( " %s", $submatches->[1] );
     };
 
     $self->{data_store}->{reggrp_data}->[-1]->{replacement} = sub {
-        return sprintf( "%s\x01%d\x01", $_[1]->[0], $_[2] );
+        return sprintf( "%s\x01%d\x01", $_[0]->{submatches}->[0], $_[0]->{store_index} );
     };
 
     $self->{data_store}->{reggrp_data}->[-1]->{store} = sub {
-        return $_[1]->[1];
+        return $_[0]->{submatches}->[1];
     };
 
     map {
