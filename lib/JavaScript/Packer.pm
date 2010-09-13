@@ -8,7 +8,7 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = '0.05_01';
+our $VERSION = '0.05_03';
 
 our $SHRINK_VARS = {
     ENCODED_DATA    => qr~\x01(\d+)\x01~,
@@ -714,7 +714,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 0.05_01
+Version 0.05_03
 
 =head1 DESCRIPTION
 
