@@ -8,7 +8,7 @@
 
 use Test::More;
 
-my $not = 8;
+my $not = 10;
 
 SKIP: {
     eval( 'use JavaScript::Packer' );
@@ -28,12 +28,23 @@ SKIP: {
     my $var = 'var x = 2;';
     $packer->minify( \$var );
     is( $var, 'var x=2;', 'string literal input and ouput' );
+
     $var = "var x = 2;\n;;;alert('hi');\nvar x = 2;";
     $packer->minify( \$var );
     is( $var, 'var x=2;var x=2;', 'scriptDebug option' );
+
     $var = "var x = 2;";
     $packer->minify( \$var, { copyright => 'BSD' } );
     is( $var, '/* BSD */var x=2;', 'copyright option');
+
+    $var = "/* JavaScript::Packer _no_compress_ */\n\nvar x = 1;\n\n\nvar y = 2;";
+    $packer->minify( \$var );
+    is( $var, "/* JavaScript::Packer _no_compress_ */\n\nvar x = 1;\n\n\nvar y = 2;", '_no_compress_ comment');
+
+    $var = "/* JavaScript::Packer _no_compress_ */\n\nvar x = 1;\n\n\nvar y = 2;";
+    $packer->minify( \$var, { no_compress_comment => 1 } );
+    is( $var, "var x=1;var y=2;", '_no_compress_ comment with no_compress_comment option');
+
 }
 
 sub filesMatch {

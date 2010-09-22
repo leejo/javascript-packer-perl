@@ -8,7 +8,9 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = '0.05_03';
+our $VERSION = '0.05_04';
+
+our $PACKER_COMMENT = '\/\*\s*JavaScript::Packer\s*(\w+)\s*\*\/';
 
 our $SHRINK_VARS = {
     ENCODED_DATA    => qr~\x01(\d+)\x01~,
@@ -355,7 +357,7 @@ sub minify {
 
     if ( ref( $opts ) ne 'HASH' ) {
         carp( 'Second argument must be a hashref of options! Using defaults!' ) if ( $opts );
-        $opts = { compress => 'clean', copyright => '' };
+        $opts = { compress => 'clean', copyright => '', no_compress_comment => 0 };
     }
     else {
         $opts->{compress} ||= 'clean';
@@ -375,12 +377,21 @@ sub minify {
             $opts->{compress} = 'obfuscate';
         }
 
-        $opts->{copyright}    = ( $opts->{copyright} and $opts->{compress} eq 'clean' ) ? ( '/* ' . $opts->{copyright} . ' */' ) : '';
+        $opts->{no_compress_comment}    = $opts->{no_compress_comment} ? 1 : 0;
+        $opts->{copyright}              = ( $opts->{copyright} and $opts->{compress} eq 'clean' ) ? ( '/* ' . $opts->{copyright} . ' */' ) : '';
+    }
+
+    if ( not $opts->{no_compress_comment} and ${$javascript} =~ /$PACKER_COMMENT/ ) {
+        my $compress = $1;
+        if ( $compress eq '_no_compress_' ) {
+            return ( $cont eq 'scalar' ) ? ${$javascript} : undef;
+        }
+
+        $opts->{compress} = grep( $compress, ( 'clean', 'shrink', 'obfuscate', 'best' ) ) ? $compress : $opts->{compress};
     }
 
     ${$javascript} =~ s/\r//gsm;
     ${$javascript} .= "\n";
-
 
     $self->{comments}->{reggrp}->exec( $javascript );
     $self->{clean}->{reggrp}->exec( $javascript );
@@ -714,7 +725,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 0.05_03
+Version 0.05_04
 
 =head1 DESCRIPTION
 

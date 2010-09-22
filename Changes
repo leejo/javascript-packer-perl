@@ -1,10 +1,14 @@
 Revision history for JavaScript-Packer
 
+0.05_04 2010-09-22
+    - Added option to define compression level via comment.
+    - Added tests.
+
 0.05_03 2010-09-13
-    - Changed requirements to Regexp::RegGrp 0.0201
+    - Changed requirements to Regexp::RegGrp 0.0201.
 
 0.05_02 2010-09-07
-    - Moved regexp grouping stuff to Regexp::RegGrp
+    - Moved regexp grouping stuff to Regexp::RegGrp.
     - Switched to Module::Install.
 
 0.0402  2010-07-29
