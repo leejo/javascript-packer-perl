@@ -1,7 +1,10 @@
 Revision history for JavaScript-Packer
 
+0.05_07 2010-09-28
+    - Bugfix: Fixed Regexp.
+
 0.05_06 2010-09-28
-    - Bugfix
+    - Bugfix: Fixed Regexp.
 
 0.05_05 2010-09-28
     - Added handling for missing semicolons. THIS WILL BE REMOVED IN FUTURE VERSIONS.
