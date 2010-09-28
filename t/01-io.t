@@ -8,7 +8,7 @@
 
 use Test::More;
 
-my $not = 10;
+my $not = 16;
 
 SKIP: {
     eval( 'use JavaScript::Packer' );
@@ -22,6 +22,10 @@ SKIP: {
     fileTest( 's3', 'obfuscate', 'compression level "obfuscate"' );
     fileTest( 's4', 'best', 'compression level "best" whith short javascript' );
     fileTest( 's5', 'best', 'compression level "best" whith long javascript' );
+    fileTest( 's6', 'clean', 'compression level "clean" missing semicolon' );
+    fileTest( 's7', 'clean', 'compression level "clean" function as argument' );
+    fileTest( 's8', 'shrink', 'compression level "shrink" function as argument' );
+    fileTest( 's9', 'shrink', 'compression level "shrink" with _no_shrink_ argument' );
 
     my $packer = JavaScript::Packer->init();
 
@@ -35,7 +39,15 @@ SKIP: {
 
     $var = "var x = 2;";
     $packer->minify( \$var, { copyright => 'BSD' } );
-    is( $var, '/* BSD */var x=2;', 'copyright option');
+    is( $var, '/* BSD */' . "\n" . 'var x=2;', 'copyright option');
+
+    $var = "/* Copyright BSD */var x = 2;";
+    $packer->minify( \$var, { remove_copyright => 1 } );
+    is( $var, 'var x=2;', 'copyright comment with remove_copyright option');
+
+    $var = "/* Copyright BSD */var x = 2;";
+    $packer->minify( \$var );
+    is( $var, '/* Copyright BSD */' . "\n" . 'var x=2;', 'copyright comment without remove_copyright option');
 
     $var = "/* JavaScript::Packer _no_compress_ */\n\nvar x = 1;\n\n\nvar y = 2;";
     $packer->minify( \$var );

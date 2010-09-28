@@ -1,5 +1,12 @@
 Revision history for JavaScript-Packer
 
+0.05_05 2010-09-28
+    - Added handling for missing semicolons. THIS WILL BE REMOVED IN FUTURE VERSIONS.
+    - Added handling for functions as arguments.
+    - Added remove_copyright option.
+    - Added copyright comment option.
+    - Added tests.
+
 0.05_04 2010-09-22
     - Added option to define compression level via comment.
     - Added tests.

@@ -8,19 +8,23 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = '0.05_04';
+our $VERSION = '0.05_05';
 
-our $PACKER_COMMENT = '\/\*\s*JavaScript::Packer\s*(\w+)\s*\*\/';
+our $PACKER_COMMENT     = '\/\*\s*JavaScript::Packer\s*(\w+)\s*\*\/';
+our $COPYRIGHT_COMMENT  = '(\/\*(?>[^\*]|\*[^\/])*copyright(?>[^\*]|\*[^\/])*\*\/)';
+
+our $MISSING_SEMICOLON  = qr/(\)\([^\(\)]*\))([^;])/;
 
 our $SHRINK_VARS = {
     ENCODED_DATA    => qr~\x01(\d+)\x01~,
-    BLOCK           => qr/(((catch|do|if|while|with|function)\b[^~{};]*(\(\s*[^{};]*\s*\))\s*)?(\{[^{}]*\}))/,
-    BRACKETS        => qr/\{[^{}]*\}|\[[^\[\]]*\]|\([^\(\)]*\)|~[^~]+~/,
+    BLOCK           => qr/(((catch|do|if|while|with|function)\b[^~{};]*(\(\s*[^{};]*\s*\))\s*)?(\{[^{}]*\}))/,  # function ( arg ) { ... }
     ENCODED_BLOCK   => qr/~#?(\d+)~/,
+    CALLER          => qr/((?>[a-zA-Z0-9_\x24\.]+)\s*\([^\(\)]*\))(?=[,\)])/,                                   # do_something( arg1, arg2 ) as argument of another function call
+    ENCODED_CALLER  => qr/~%(\d+)%~/,
+    BRACKETS        => qr/\{[^{}]*\}|\[[^\[\]]*\]|\([^\(\)]*\)|~[^~]+~/,
     IDENTIFIER      => qr~[a-zA-Z_\x24][a-zA-Z_0-9\\x24]*~,
     SCOPED          => qr/~#(\d+)~/,
-    VAR             => qr~\bvar\b~,
-    VARS            => qr~\b(?:var|function)\s+((?>[a-zA-Z0-9_\x24]+))~,
+    VARS            => qr~\b(?:var|function)\s+((?>[a-zA-Z0-9_\x24]+))~,                                        # var x, funktion blah
     PREFIX          => qr~\x02~,
     SHRUNK          => qr~\x02\d+\b~
 };
@@ -304,7 +308,7 @@ sub init {
 
     map {
         $self->{$_}->{reggrp} = Regexp::RegGrp->new( { reggrp => $self->{$_}->{reggrp_data} } );
-    } ( 'comments', 'clean', 'whitespace', 'data_store', 'concat', 'trim' );
+    } ( 'comments', 'clean', 'whitespace', 'concat', 'trim' );
 
     $self->{data_store}->{reggrp} = Regexp::RegGrp->new(
         {
@@ -313,7 +317,8 @@ sub init {
         }
     );
 
-    $self->{block_data} = [];
+    $self->{block_data}     = [];
+    $self->{caller_data}    = [];
 
     bless( $self, $class );
 
@@ -357,7 +362,7 @@ sub minify {
 
     if ( ref( $opts ) ne 'HASH' ) {
         carp( 'Second argument must be a hashref of options! Using defaults!' ) if ( $opts );
-        $opts = { compress => 'clean', copyright => '', no_compress_comment => 0 };
+        $opts = { compress => 'clean', copyright => '', no_compress_comment => 0, remove_copyright => 0 };
     }
     else {
         $opts->{compress} ||= 'clean';
@@ -377,8 +382,14 @@ sub minify {
             $opts->{compress} = 'obfuscate';
         }
 
+        $opts->{remove_copyright}       = $opts->{remove_copyright} ? 1 : 0;
         $opts->{no_compress_comment}    = $opts->{no_compress_comment} ? 1 : 0;
+        $opts->{copyright}              = '' if ( ref( $opts->{copyright} ) );
         $opts->{copyright}              = ( $opts->{copyright} and $opts->{compress} eq 'clean' ) ? ( '/* ' . $opts->{copyright} . ' */' ) : '';
+    }
+
+    if ( not $opts->{remove_copyright} and not $opts->{copyright} and ${$javascript} =~ /$COPYRIGHT_COMMENT/ism ) {
+        $opts->{copyright} = $1;
     }
 
     if ( not $opts->{no_compress_comment} and ${$javascript} =~ /$PACKER_COMMENT/ ) {
@@ -398,14 +409,33 @@ sub minify {
     $self->{whitespace}->{reggrp}->exec( $javascript );
     $self->{concat}->{reggrp}->exec( $javascript );
 
+    # Do something about the f**king missing semicolon.
+    # It's rediculous to correct invalid javascript and I don't like it,
+    # but some well known libraries e.g. prototype.js can't be compressed correctly
+    # without it.
+
+    $self->{data_store}->{reggrp}->exec( $javascript );
+
+    while( ${$javascript} =~ /$SHRINK_VARS->{CALLER}/ ) {
+        ${$javascript} =~ s/$SHRINK_VARS->{CALLER}/$self->_store_caller_data( $1 )/egsm;
+    }
+
+    ${$javascript} =~ s/$MISSING_SEMICOLON/sprintf( '%s;%s', $1, $2 )/egsm;
+
+    $self->_restore_data( $javascript, 'caller_data', $SHRINK_VARS->{ENCODED_CALLER} );
+
+    $self->{data_store}->{reggrp}->restore_stored( $javascript );
+
+    # end of f**king missing semicolon fix
+
     if ( $opts->{compress} ne 'clean' ) {
         $self->{data_store}->{reggrp}->exec( $javascript );
 
         while( ${$javascript} =~ /$SHRINK_VARS->{BLOCK}/ ) {
-            ${$javascript} =~ s/$SHRINK_VARS->{BLOCK}/$self->_encode_shrink( $1 )/egsm;
+            ${$javascript} =~ s/$SHRINK_VARS->{BLOCK}/$self->_store_block_data( $1 )/egsm;
         }
 
-        $self->_decode_shrink( $javascript, 'block_data', $SHRINK_VARS->{ENCODED_BLOCK} );
+        $self->_restore_data( $javascript, 'block_data', $SHRINK_VARS->{ENCODED_BLOCK} );
 
         my %shrunk_vars = map { $_ => 1 } ( ${$javascript} =~ /$SHRINK_VARS->{SHRUNK}/g );
 
@@ -425,10 +455,6 @@ sub minify {
 
         $self->{block_data} = [];
     }
-    else {
-        ${$javascript} = $opts->{copyright} . ${$javascript} if ( $opts->{copyright} );
-    }
-
 
     if ( $opts->{compress} eq 'obfuscate' or $opts->{compress} eq 'best' ) {
         my $words = {};
@@ -605,6 +631,8 @@ sub minify {
 
     }
 
+    ${$javascript} = $opts->{copyright} . "\n" . ${$javascript} if ( $opts->{copyright} );
+
     return ${$javascript} if ( $cont eq 'scalar' );
 }
 
@@ -614,15 +642,25 @@ sub _process_wrapper {
     $self->{$reg_name}->{reggrp}->exec( $in );
 }
 
-sub _decode_shrink {
+sub _restore_data {
     my ( $self, $string_ref, $data_name, $pattern ) = @_;
 
     while ( ${$string_ref} =~ /$pattern/ ) {
         ${$string_ref} =~ s/$pattern/$self->{$data_name}->[$1]/egsm;
     }
-};
+}
 
-sub _encode_shrink {
+sub _store_caller_data {
+    my ( $self, $match ) = @_;
+
+    my $replacement = sprintf( "~%%%d%%~", scalar( @{$self->{caller_data}} ) );
+
+    push( @{$self->{caller_data}}, $match );
+
+    return $replacement;
+}
+
+sub _store_block_data {
     my ( $self, $match ) = @_;
 
     my ( undef, $prefix, $blocktype, $args, $block ) = $match =~ /$SHRINK_VARS->{BLOCK}/;
@@ -633,7 +671,7 @@ sub _encode_shrink {
     my $replacement = '';
     if ( $blocktype eq 'function' ) {
 
-        $self->_decode_shrink( \$block, 'block_data', $SHRINK_VARS->{SCOPED} );
+        $self->_restore_data( \$block, 'block_data', $SHRINK_VARS->{SCOPED} );
 
         $args =~ s/\s*//g;
 
@@ -642,21 +680,25 @@ sub _encode_shrink {
 
         $args =~ s/^\(|\)$//g;
 
-        my %block_vars = ();
-        my $do_shrink = grep( $_ eq '_no_shrink_', split( /\s*,\s*/, $args ) ) ? 0 : 1;
-
-        if ( $do_shrink ) {
-            %block_vars = map { $_ => 1 } ( $block =~ /$SHRINK_VARS->{VARS}/g ), grep( $_ ne '$super', split( /\s*,\s*/, $args ) );
+        while( $args =~ /$SHRINK_VARS->{CALLER}/ ) {
+            $args =~ s/$SHRINK_VARS->{CALLER}//gsm;
         }
 
-        $self->_decode_shrink( \$block, 'block_data', $SHRINK_VARS->{ENCODED_BLOCK} );
+        my @vars = grep( $_, split( /\s*,\s*/, $args ) );
+        my $do_shrink = grep( $_ eq '_no_shrink_', @vars ) ? 0 : 1;
+
+        my %block_vars = ();
+        if ( $do_shrink ) {
+            %block_vars = map { $_ => 1 } ( $block =~ /$SHRINK_VARS->{VARS}/g ), grep( $_ ne '$super', @vars );
+        }
+
+        $self->_restore_data( \$block, 'block_data', $SHRINK_VARS->{ENCODED_BLOCK} );
 
         if ( $do_shrink ) {
 
             my $cnt = 0;
             foreach my $block_var ( keys( %block_vars ) ) {
                 if ( length( $block_var ) ) {
-                    my $pattern = sprintf( "%s%d", $SHRINK_VARS->{PREFIX}, $cnt );
                     while ( $block =~ /$SHRINK_VARS->{PREFIX}\Q$cnt\E\b/ ) {
                         $cnt++;
                     }
@@ -725,7 +767,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 0.05_04
+Version 0.05_05
 
 =head1 DESCRIPTION
 
@@ -770,8 +812,25 @@ For backward compatibility 'minify' and 'base62' will still work.
 
 =item copyright
 
-You can add a copyright notice on top of the script. The copyright notice will
-only be added if the compression value is 'clean'.
+You can add a copyright notice on top of the script.
+
+=item remove_copyright
+
+If there is a copyright notice in a comment it will only be removed if this
+option is set to a true value. Otherwise the first comment that contains the
+word "copyright" will be added at the top of the packed script. A copyright
+comment will be overwritten by a copyright notice defined with the copyright
+option.
+
+=item no_compress_comment
+
+If not set to a true value it is allowed to set a JavaScript comment that
+prevents the input being packed or defines a compression level.
+
+    /* JavaScript::Packer _no_compress_ */
+    /* JavaScript::Packer shrink */
+
+Is set by default.
 
 =back
 
