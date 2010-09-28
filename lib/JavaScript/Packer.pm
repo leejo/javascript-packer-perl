@@ -8,12 +8,12 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = '0.05_05';
+our $VERSION = '0.05_06';
 
 our $PACKER_COMMENT     = '\/\*\s*JavaScript::Packer\s*(\w+)\s*\*\/';
 our $COPYRIGHT_COMMENT  = '(\/\*(?>[^\*]|\*[^\/])*copyright(?>[^\*]|\*[^\/])*\*\/)';
 
-our $MISSING_SEMICOLON  = qr/(\)\([^\(\)]*\))([^;])/;
+our $MISSING_SEMICOLON  = qr/(\)\([^\(\)]*\))([^;\.\),])/;
 
 our $SHRINK_VARS = {
     ENCODED_DATA    => qr~\x01(\d+)\x01~,
@@ -767,7 +767,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 0.05_05
+Version 0.05_06
 
 =head1 DESCRIPTION
 

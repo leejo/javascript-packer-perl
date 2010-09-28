@@ -1,5 +1,8 @@
 Revision history for JavaScript-Packer
 
+0.05_06 2010-09-28
+    - Bugfix
+
 0.05_05 2010-09-28
     - Added handling for missing semicolons. THIS WILL BE REMOVED IN FUTURE VERSIONS.
     - Added handling for functions as arguments.
