@@ -29,8 +29,6 @@ t/scripts/s4-expected.js
 t/scripts/s4.js
 t/scripts/s5-expected.js
 t/scripts/s5.js
-t/scripts/s6-expected.js
-t/scripts/s6.js
 t/scripts/s7-expected.js
 t/scripts/s7.js
 t/scripts/s8-expected.js
