@@ -8,19 +8,16 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = '0.05_07';
+our $VERSION = '0.05_08';
 
 our $PACKER_COMMENT     = '\/\*\s*JavaScript::Packer\s*(\w+)\s*\*\/';
 our $COPYRIGHT_COMMENT  = '(\/\*(?>[^\*]|\*[^\/])*copyright(?>[^\*]|\*[^\/])*\*\/)';
-
-our $MISSING_SEMICOLON  = qr/(\)\([^\(\)]*\))([^;\.\),\]\}])/;
 
 our $SHRINK_VARS = {
     ENCODED_DATA    => qr~\x01(\d+)\x01~,
     BLOCK           => qr/(((catch|do|if|while|with|function)\b[^~{};]*(\(\s*[^{};]*\s*\))\s*)?(\{[^{}]*\}))/,  # function ( arg ) { ... }
     ENCODED_BLOCK   => qr/~#?(\d+)~/,
     CALLER          => qr/((?>[a-zA-Z0-9_\x24\.]+)\s*\([^\(\)]*\))(?=[,\)])/,                                   # do_something( arg1, arg2 ) as argument of another function call
-    ENCODED_CALLER  => qr/~%(\d+)%~/,
     BRACKETS        => qr/\{[^{}]*\}|\[[^\[\]]*\]|\([^\(\)]*\)|~[^~]+~/,
     IDENTIFIER      => qr~[a-zA-Z_\x24][a-zA-Z_0-9\\x24]*~,
     SCOPED          => qr/~#(\d+)~/,
@@ -317,8 +314,7 @@ sub init {
         }
     );
 
-    $self->{block_data}     = [];
-    $self->{caller_data}    = [];
+    $self->{block_data} = [];
 
     bless( $self, $class );
 
@@ -408,25 +404,6 @@ sub minify {
     $self->{clean}->{reggrp}->exec( $javascript );
     $self->{whitespace}->{reggrp}->exec( $javascript );
     $self->{concat}->{reggrp}->exec( $javascript );
-
-    # Do something about the f**king missing semicolon.
-    # It's rediculous to correct invalid javascript and I don't like it,
-    # but some well known libraries e.g. prototype.js can't be compressed correctly
-    # without it.
-
-    $self->{data_store}->{reggrp}->exec( $javascript );
-
-    while( ${$javascript} =~ /$SHRINK_VARS->{CALLER}/ ) {
-        ${$javascript} =~ s/$SHRINK_VARS->{CALLER}/$self->_store_caller_data( $1 )/egsm;
-    }
-
-    ${$javascript} =~ s/$MISSING_SEMICOLON/sprintf( '%s;%s', $1, $2 )/egsm;
-
-    $self->_restore_data( $javascript, 'caller_data', $SHRINK_VARS->{ENCODED_CALLER} );
-
-    $self->{data_store}->{reggrp}->restore_stored( $javascript );
-
-    # end of f**king missing semicolon fix
 
     if ( $opts->{compress} ne 'clean' ) {
         $self->{data_store}->{reggrp}->exec( $javascript );
@@ -650,16 +627,6 @@ sub _restore_data {
     }
 }
 
-sub _store_caller_data {
-    my ( $self, $match ) = @_;
-
-    my $replacement = sprintf( "~%%%d%%~", scalar( @{$self->{caller_data}} ) );
-
-    push( @{$self->{caller_data}}, $match );
-
-    return $replacement;
-}
-
 sub _store_block_data {
     my ( $self, $match ) = @_;
 
@@ -767,7 +734,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 0.05_07
+Version 0.05_08
 
 =head1 DESCRIPTION
 
