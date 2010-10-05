@@ -1,6 +1,6 @@
 package JavaScript::Packer;
 
-use 5.008;
+use 5.008009;
 use warnings;
 use strict;
 use Carp;
