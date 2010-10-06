@@ -9,5 +9,7 @@ requires        'Regexp::RegGrp'    => "0.0201";
 
 repository 'http://github.com/nevesenin/javascript-packer-perl';
 
+clean_files 't/scripts/s?-got.js';
+
 auto_install();
 WriteAll();
