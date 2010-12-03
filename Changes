@@ -1,5 +1,8 @@
 Revision history for JavaScript-Packer
 
+0.06    2010-12-03
+    - Raised version number.
+
 0.05_08 2010-10-05
     - Removed the ridiculous missing semicolon fix.
     - Changed required perl version to 5.8.9.

@@ -8,7 +8,7 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = '0.05_08';
+our $VERSION = '0.06';
 
 our $PACKER_COMMENT     = '\/\*\s*JavaScript::Packer\s*(\w+)\s*\*\/';
 our $COPYRIGHT_COMMENT  = '(\/\*(?>[^\*]|\*[^\/])*copyright(?>[^\*]|\*[^\/])*\*\/)';
@@ -734,7 +734,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 0.05_08
+Version 0.06
 
 =head1 DESCRIPTION
 
