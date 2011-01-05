@@ -1,5 +1,8 @@
 Revision history for JavaScript-Packer
 
+0.0601  2011-01-05
+    - Changed requirements to Regexp::RegGrp 0.04
+
 0.06    2010-12-03
     - Raised version number.
 
