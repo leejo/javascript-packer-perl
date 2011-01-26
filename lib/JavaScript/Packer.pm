@@ -8,13 +8,12 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = '1.000';
+our $VERSION = '1.001';
 
 our $PACKER_COMMENT     = '\/\*\s*JavaScript::Packer\s*(\w+)\s*\*\/';
 our $COPYRIGHT_COMMENT  = '(\/\*(?>[^\*]|\*[^\/])*copyright(?>[^\*]|\*[^\/])*\*\/)';
 
 our $SHRINK_VARS = {
-    ENCODED_DATA    => qr~\x01(\d+)\x01~,
     BLOCK           => qr/(((catch|do|if|while|with|function)\b[^~{};]*(\(\s*[^{};]*\s*\))\s*)?(\{[^{}]*\}))/,  # function ( arg ) { ... }
     ENCODED_BLOCK   => qr/~#?(\d+)~/,
     CALLER          => qr/((?>[a-zA-Z0-9_\x24\.]+)\s*\([^\(\)]*\))(?=[,\)])/,                                   # do_something( arg1, arg2 ) as argument of another function call
@@ -307,12 +306,7 @@ sub init {
         $self->{$_}->{reggrp} = Regexp::RegGrp->new( { reggrp => $self->{$_}->{reggrp_data} } );
     } ( 'comments', 'clean', 'whitespace', 'concat', 'trim' );
 
-    $self->{data_store}->{reggrp} = Regexp::RegGrp->new(
-        {
-            reggrp          => $self->{data_store}->{reggrp_data},
-            restore_pattern => $SHRINK_VARS->{ENCODED_DATA}
-        }
-    );
+    $self->{data_store}->{reggrp} = Regexp::RegGrp->new( { reggrp => $self->{data_store}->{reggrp_data} } );
 
     $self->{block_data} = [];
 
@@ -734,7 +728,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 1.000
+Version 1.001
 
 =head1 DESCRIPTION
 

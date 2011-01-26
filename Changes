@@ -1,5 +1,9 @@
 Revision history for JavaScript-Packer
 
+1.001   2011-01-27
+    - Bugfix: Removed restore pattern.
+    - Added test.
+
 1.000   2011-01-17
     - Changed versioning.
     - Raised major version due to changes in versioning.

@@ -1,2 +1,2 @@
-function(c){var b='blah blubb';var e=3;alert(b);var g=1;//@a
-var f=c;/*@abcd var g=1;@*/abcd var d=$H()};/*@abcd var x=1;@*/
+function(b){var a='blah blubb';var d=3;alert(a);var f=1;//@a
+var e=b;/*@abcd var f=1;@*/abcd var c=$H()};/*@abcd var x=1;@*/

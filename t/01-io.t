@@ -8,7 +8,7 @@
 
 use Test::More;
 
-my $not = 15;
+my $not = 16;
 
 SKIP: {
     eval( 'use JavaScript::Packer' );
@@ -25,6 +25,7 @@ SKIP: {
     fileTest( 's7', 'clean', 'compression level "clean" function as argument' );
     fileTest( 's8', 'shrink', 'compression level "shrink" function as argument' );
     fileTest( 's9', 'shrink', 'compression level "shrink" with _no_shrink_ argument' );
+    fileTest( 's10', 'shrink', 'compression level "shrink" with qouted args' );
 
     my $packer = JavaScript::Packer->init();
 
