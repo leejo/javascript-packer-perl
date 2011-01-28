@@ -35,3 +35,5 @@ t/scripts/s8-expected.js
 t/scripts/s8.js
 t/scripts/s9-expected.js
 t/scripts/s9.js
+t/scripts/s10-expected.js
+t/scripts/s10.js
