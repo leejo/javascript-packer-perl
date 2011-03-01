@@ -5,7 +5,7 @@ use inc::Module::Install;
 
 all_from        'lib/JavaScript/Packer.pm';
 test_requires   'Test::More'        => 0;
-requires        'Regexp::RegGrp'    => "1.000";
+requires        'Regexp::RegGrp'    => "1.000001";
 
 repository 'http://github.com/nevesenin/javascript-packer-perl';
 

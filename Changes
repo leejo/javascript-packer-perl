@@ -1,5 +1,8 @@
 Revision history for JavaScript-Packer
 
+1.002001    2011-03-01
+    - Changed requirements to Regexp::RegGrp 1.000001 due to "undefined submatches bug" in Regexp::RegGrp.
+
 1.002   2011-01-28
     - Bugfix: Added missing testfile.
 
