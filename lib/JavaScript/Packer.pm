@@ -8,10 +8,23 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = '1.002001';
+our $VERSION = '1.003_001';
+
+our @BOOLEAN_ACCESSORS = (
+    'no_compress_comment',
+    'remove_copyright'
+);
+
+our @COPYRIGHT_ACCESSORS = (
+    'copyright',
+    'copyright_comment'
+);
+
+our @COMPRESS_OPTS      = ( 'clean', 'obfuscate', 'shrink', 'best' );
+our $DEFAULT_COMPRESS   = 'clean';
 
 our $PACKER_COMMENT     = '\/\*\s*JavaScript::Packer\s*(\w+)\s*\*\/';
-our $COPYRIGHT_COMMENT  = '(\/\*(?>[^\*]|\*[^\/])*copyright(?>[^\*]|\*[^\/])*\*\/)';
+our $COPYRIGHT_COMMENT  = '\/\*((?>[^\*]|\*[^\/])*copyright(?>[^\*]|\*[^\/])*)\*\/';
 
 our $SHRINK_VARS = {
     BLOCK           => qr/(((catch|do|if|while|with|function)\b[^~{};]*(\(\s*[^{};]*\s*\))\s*)?(\{[^{}]*\}))/,  # function ( arg ) { ... }
@@ -132,7 +145,7 @@ our $WHITESPACE = [
     }
 ];
 
- our $TRIM = [
+our $TRIM = [
     {
         regexp      => '(\d)(?:\|\d)+\|(\d)',
         replacement => sub { return sprintf( "%d-%d", $_[0]->{submatches}->[0] || 0, $_[0]->{submatches}->[1] || 0 ); }
@@ -151,9 +164,80 @@ our $WHITESPACE = [
     }
 ];
 
+our @REGGRPS = ( 'comments', 'clean', 'whitespace', 'concat', 'trim', 'data_store' );
+
+# --------------------------------------------------------------------------- #
+
+{
+    no strict 'refs';
+
+    foreach my $field ( @BOOLEAN_ACCESSORS ) {
+        next if defined *{ __PACKAGE__ . '::' . $field }{CODE};
+
+        *{ __PACKAGE__ . '::' . $field} = sub {
+            my ( $self, $value ) = @_;
+
+            $self->{'_' . $field} = $value ? 1 : undef if ( defined( $value ) );
+
+            return $self->{'_' . $field};
+        };
+    }
+
+    foreach my $field ( @COPYRIGHT_ACCESSORS ) {
+        $field = '_' . $field if ( $field eq 'copyright_comment' );
+        next if defined *{ __PACKAGE__ . '::' . $field }{CODE};
+
+        *{ __PACKAGE__ . '::' . $field} = sub {
+            my ( $self, $value ) = @_;
+
+            if ( defined( $value ) and not ref( $value ) ) {
+                $value =~ s/^\s*|\s*$//gs;
+                $self->{'_' . $field} = $value;
+            }
+
+            my $ret = '';
+
+            if ( $self->{'_' . $field} and $self->compress() eq $DEFAULT_COMPRESS ) {
+                $ret = '/* ' . $self->{'_' . $field} . ' */' . "\n";
+            }
+
+            return $ret;
+        };
+    }
+
+    foreach my $reggrp ( @REGGRPS ) {
+        next if defined *{ __PACKAGE__ . '::reggrp_' . $reggrp }{CODE};
+
+        *{ __PACKAGE__ . '::reggrp_' . $reggrp } = sub {
+            my ( $self ) = shift;
+
+            return $self->{ '_reggrp_' . $reggrp };
+        };
+    }
+}
+
+sub compress {
+    my ( $self, $value ) = @_;
+
+    if ( defined( $value ) ) {
+        if ( grep( $value eq $_, @COMPRESS_OPTS ) ) {
+            $self->{_compress} = $value;
+        }
+        elsif ( ! $value ) {
+            $self->{_compress} = undef;
+        }
+    }
+
+    $self->{_compress} ||= $DEFAULT_COMPRESS;
+
+    return $self->{_compress};
+}
+
 sub init {
     my $class   = shift;
     my $self    = {};
+
+    bless( $self, $class );
 
     map {
         my $what = $_;
@@ -267,13 +351,9 @@ sub init {
     $self->{comments}->{reggrp_data}->[-2]->{replacement} = sub {
         my $submatches = $_[0]->{submatches};
         if ( $submatches->[0] eq '@' ) {
-            # I don't like this, but
-            # $self->{comments}->{reggrp}->exec( \$_[1]->[1] ); ...
-            # will not work. It isn't initialized jet.
-            # If someone has a better idea, please let me know
-            $self->_process_wrapper( 'comments', \$submatches->[1] );
-            $self->_process_wrapper( 'clean', \$submatches->[1] );
-            $self->_process_wrapper( 'whitespace', \$submatches->[1] );
+            $self->reggrp_comments()->exec( \$submatches->[1] );
+            $self->reggrp_clean()->exec( \$submatches->[1] );
+            $self->reggrp_whitespace()->exec( \$submatches->[1] );
 
             return sprintf( "//%s%s\n%s", @{$submatches} );
         }
@@ -284,10 +364,10 @@ sub init {
         my $submatches = $_[0]->{submatches};
         if ( $submatches->[0] =~ /^\/\*\@(.*)\@\*\/$/sm ) {
             my $cmnt = $1;
-            # Same as above
-            $self->_process_wrapper( 'comments', \$cmnt );
-            $self->_process_wrapper( 'clean', \$cmnt );
-            $self->_process_wrapper( 'whitespace', \$cmnt );
+
+            $self->reggrp_comments()->exec( \$cmnt );
+            $self->reggrp_clean()->exec( \$cmnt );
+            $self->reggrp_whitespace()->exec( \$cmnt );
 
             return sprintf( '/*@%s@*/ %s', $cmnt, $submatches->[1] );
         }
@@ -303,14 +383,10 @@ sub init {
     };
 
     map {
-        $self->{$_}->{reggrp} = Regexp::RegGrp->new( { reggrp => $self->{$_}->{reggrp_data} } );
-    } ( 'comments', 'clean', 'whitespace', 'concat', 'trim' );
-
-    $self->{data_store}->{reggrp} = Regexp::RegGrp->new( { reggrp => $self->{data_store}->{reggrp_data} } );
+        $self->{ '_reggrp_' . $_ } = Regexp::RegGrp->new( { reggrp => $self->{$_}->{reggrp_data} } );
+    } @REGGRPS;
 
     $self->{block_data} = [];
-
-    bless( $self, $class );
 
     return $self;
 }
@@ -350,57 +426,43 @@ sub minify {
         $javascript = ref( $input ) ? $input : \$input;
     }
 
-    if ( ref( $opts ) ne 'HASH' ) {
-        carp( 'Second argument must be a hashref of options! Using defaults!' ) if ( $opts );
-        $opts = { compress => 'clean', copyright => '', no_compress_comment => 0, remove_copyright => 0 };
-    }
-    else {
-        $opts->{compress} ||= 'clean';
-        unless (
-            grep(
-                $_ eq $opts->{compress},
-                ( 'clean', 'minify', 'shrink', 'base62', 'obfuscate', 'best' )
-            )
-        ) {
-            $opts->{compress} = 'clean';
+    if ( ref( $opts ) eq 'HASH' ) {
+        foreach my $field ( @BOOLEAN_ACCESSORS ) {
+            $self->$field( $opts->{$field} ) if ( defined( $opts->{$field} ) );
         }
 
-        if ( $opts->{compress} eq 'minify' ) {
-            $opts->{compress} = 'clean';
-        }
-        elsif ( $opts->{compress} eq 'base62' ) {
-            $opts->{compress} = 'obfuscate';
-        }
-
-        $opts->{remove_copyright}       = $opts->{remove_copyright} ? 1 : 0;
-        $opts->{no_compress_comment}    = $opts->{no_compress_comment} ? 1 : 0;
-        $opts->{copyright}              = '' if ( ref( $opts->{copyright} ) );
-        $opts->{copyright}              = ( $opts->{copyright} and $opts->{compress} eq 'clean' ) ? ( '/* ' . $opts->{copyright} . ' */' ) : '';
+        $self->compress( $opts->{compress} ) if ( defined( $opts->{compress} ) );
+        $self->copyright( $opts->{copyright} ) if ( defined( $opts->{copyright} ) );
     }
 
-    if ( not $opts->{remove_copyright} and not $opts->{copyright} and ${$javascript} =~ /$COPYRIGHT_COMMENT/ism ) {
-        $opts->{copyright} = $1;
-    }
+    my $copyright_comment = '';
 
-    if ( not $opts->{no_compress_comment} and ${$javascript} =~ /$PACKER_COMMENT/ ) {
+    if ( ${$javascript} =~ /$COPYRIGHT_COMMENT/ism ) {
+        $copyright_comment = $1;
+    }
+    # Resets copyright_comment() if there is no copyright comment
+    $self->_copyright_comment( $copyright_comment );
+
+    if ( not $self->no_compress_comment() and ${$javascript} =~ /$PACKER_COMMENT/ ) {
         my $compress = $1;
         if ( $compress eq '_no_compress_' ) {
-            return ( $cont eq 'scalar' ) ? ${$javascript} : undef;
+            return ${$javascript} if ( $cont eq 'scalar' );
+            return;
         }
 
-        $opts->{compress} = grep( $compress, ( 'clean', 'shrink', 'obfuscate', 'best' ) ) ? $compress : $opts->{compress};
+        $self->compress( $compress );
     }
 
     ${$javascript} =~ s/\r//gsm;
     ${$javascript} .= "\n";
 
-    $self->{comments}->{reggrp}->exec( $javascript );
-    $self->{clean}->{reggrp}->exec( $javascript );
-    $self->{whitespace}->{reggrp}->exec( $javascript );
-    $self->{concat}->{reggrp}->exec( $javascript );
+    $self->reggrp_comments()->exec( $javascript );
+    $self->reggrp_clean()->exec( $javascript );
+    $self->reggrp_whitespace()->exec( $javascript );
+    $self->reggrp_concat()->exec( $javascript );
 
-    if ( $opts->{compress} ne 'clean' ) {
-        $self->{data_store}->{reggrp}->exec( $javascript );
+    if ( $self->compress() ne 'clean' ) {
+        $self->reggrp_data_store()->exec( $javascript );
 
         while( ${$javascript} =~ /$SHRINK_VARS->{BLOCK}/ ) {
             ${$javascript} =~ s/$SHRINK_VARS->{BLOCK}/$self->_store_block_data( $1 )/egsm;
@@ -422,12 +484,12 @@ sub minify {
             ${$javascript} =~ s/$shrunk_var/$short_id/g;
         }
 
-        $self->{data_store}->{reggrp}->restore_stored( $javascript );
+        $self->reggrp_data_store()->restore_stored( $javascript );
 
         $self->{block_data} = [];
     }
 
-    if ( $opts->{compress} eq 'obfuscate' or $opts->{compress} eq 'best' ) {
+    if ( $self->compress() eq 'obfuscate' or $self->compress() eq 'best' ) {
         my $words = {};
 
         my @words = ${$javascript} =~ /$BASE62_VARS->{WORDS}/g;
@@ -501,7 +563,7 @@ sub minify {
 
         my $pd = join( '|', @pattern );
 
-        $self->{trim}->{reggrp}->exec( \$pd );
+        $self->reggrp_trim()->exec( \$pd );
 
         unless ( $pd ) {
             $pd = '^$';
@@ -588,7 +650,7 @@ sub minify {
 
         $packed_length += ${$javascript} =~ tr/\\\'/\\\'/;
 
-        if ( $opts->{compress} eq 'obfuscate' or $packed_length <= length( ${$javascript} ) ) {
+        if ( $self->compress() eq 'obfuscate' or $packed_length <= length( ${$javascript} ) ) {
 
             ${$javascript} =~ s/$BASE62_VARS->{WORDS}/sprintf( "%s", $words->{$1}->{encoded} )/eg;
 
@@ -602,15 +664,11 @@ sub minify {
 
     }
 
-    ${$javascript} = $opts->{copyright} . "\n" . ${$javascript} if ( $opts->{copyright} );
+    if ( not $self->remove_copyright() ) {
+        ${$javascript} = ( $self->copyright() || $self->_copyright_comment() ) . ${$javascript};
+    }
 
     return ${$javascript} if ( $cont eq 'scalar' );
-}
-
-sub _process_wrapper {
-    my ( $self, $reg_name, $in ) = @_;
-
-    $self->{$reg_name}->{reggrp}->exec( $in );
 }
 
 sub _restore_data {
@@ -728,7 +786,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 1.002001
+Version 1.003_001
 
 =head1 DESCRIPTION
 
@@ -855,9 +913,8 @@ Merten Falk, C<< <nevesenin at cpan.org> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to
-C<bug-javascript-packer at rt.cpan.org>, or through the web interface at
-L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=JavaScript-Packer>.
+Please report any bugs or feature requests through the web interface at
+L<http://github.com/nevesenin/javascript-packer-perl/issues>.
 
 =head1 SUPPORT
 

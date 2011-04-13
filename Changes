@@ -1,5 +1,12 @@
 Revision history for JavaScript-Packer
 
+1.003_001   2011-04-13
+    - Compression opts "minify" and "base62" are no longer supported.
+    - Added accessors.
+    - Added tests.
+    - Minor Bugfixes.
+    - Cleanup.
+
 1.002001    2011-03-01
     - Changed requirements to Regexp::RegGrp 1.000001 due to "undefined submatches bug" in Regexp::RegGrp.
 

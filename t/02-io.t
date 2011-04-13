@@ -2,7 +2,7 @@
 
 # =========================================================================== #
 #
-# All these tests are stolen from JavaScript::Minifier
+# Most of these tests are stolen from JavaScript::Minifier
 #
 # =========================================================================== #
 
@@ -38,16 +38,20 @@ SKIP: {
     is( $var, 'var x=2;var x=2;', 'scriptDebug option' );
 
     $var = "var x = 2;";
-    $packer->minify( \$var, { copyright => 'BSD' } );
+    JavaScript::Packer->init()->minify( \$var, { copyright => 'BSD' } );
     is( $var, '/* BSD */' . "\n" . 'var x=2;', 'copyright option');
+
+    $packer = JavaScript::Packer->init();
 
     $var = "/* Copyright BSD */var x = 2;";
     $packer->minify( \$var, { remove_copyright => 1 } );
     is( $var, 'var x=2;', 'copyright comment with remove_copyright option');
 
     $var = "/* Copyright BSD */var x = 2;";
-    $packer->minify( \$var );
+    $packer->minify( \$var, { remove_copyright => 0 } );
     is( $var, '/* Copyright BSD */' . "\n" . 'var x=2;', 'copyright comment without remove_copyright option');
+
+    $packer = JavaScript::Packer->init();
 
     $var = "/* JavaScript::Packer _no_compress_ */\n\nvar x = 1;\n\n\nvar y = 2;";
     $packer->minify( \$var );
