@@ -8,7 +8,7 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = '1.003_001';
+our $VERSION = '1.003_002';
 
 our @BOOLEAN_ACCESSORS = (
     'no_compress_comment',
@@ -197,7 +197,7 @@ our @REGGRPS = ( 'comments', 'clean', 'whitespace', 'concat', 'trim', 'data_stor
 
             my $ret = '';
 
-            if ( $self->{'_' . $field} and $self->compress() eq $DEFAULT_COMPRESS ) {
+            if ( $self->{'_' . $field} ) {
                 $ret = '/* ' . $self->{'_' . $field} . ' */' . "\n";
             }
 
@@ -786,7 +786,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 1.003_001
+Version 1.003_002
 
 =head1 DESCRIPTION
 

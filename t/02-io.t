@@ -8,7 +8,7 @@
 
 use Test::More;
 
-my $not = 16;
+my $not = 19;
 
 SKIP: {
     eval( 'use JavaScript::Packer' );
@@ -38,8 +38,18 @@ SKIP: {
     is( $var, 'var x=2;var x=2;', 'scriptDebug option' );
 
     $var = "var x = 2;";
-    JavaScript::Packer->init()->minify( \$var, { copyright => 'BSD' } );
-    is( $var, '/* BSD */' . "\n" . 'var x=2;', 'copyright option');
+    $packer->copyright( 'BSD' );
+    $packer->minify( \$var );
+    is( $var, '/* BSD */' . "\n" . 'var x=2;', 'copyright option compression level "clean"');
+    $packer->compress( 'shrink' );
+    $packer->minify( \$var );
+    is( $var, '/* BSD */' . "\n" . 'var x=2;', 'copyright option compression level "shrink"');
+    $packer->compress( 'best' );
+    $packer->minify( \$var );
+    is( $var, '/* BSD */' . "\n" . 'var x=2;', 'copyright option compression level "best"');
+    $packer->compress( 'obfuscate' );
+    $packer->minify( \$var );
+    is( $var, '/* BSD */' . "\neval(function(p,a,c,k,e,r){e=String;if('0'.replace(0,e)==0){while(c--)r[e(c)]=k[c];k=[function(e){return r[e]||e}];e=function(){return'[01]'};c=1};while(c--)if(k[c])p=p.replace(new RegExp('\\\\b'+e(c)+'\\\\b','g'),k[c]);return p}('0 1=2;',[],2,'var|x'.split('|'),0,{}))", 'copyright option compression level "obfuscate"');
 
     $packer = JavaScript::Packer->init();
 

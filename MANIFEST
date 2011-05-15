@@ -15,6 +15,7 @@ inc/Module/Install/WriteAll.pm
 lib/JavaScript/Packer.pm
 Makefile.PL
 MANIFEST
+META.yml
 README
 t/00-load.t
 t/01-interface.t

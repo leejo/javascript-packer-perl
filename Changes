@@ -1,5 +1,8 @@
 Revision history for JavaScript-Packer
 
+1.003_002   2011-05-15
+    - Made comment option work in conjunction with all compression options.
+
 1.003_001   2011-04-13
     - Compression opts "minify" and "base62" are no longer supported.
     - Added accessors.
