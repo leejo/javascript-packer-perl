@@ -2,7 +2,7 @@
 
 use Test::More;
 
-my $not = 14;
+my $not = 18;
 
 SKIP: {
     eval { use JavaScript::Packer; };
@@ -41,4 +41,22 @@ SKIP: {
     is( $packer->copyright(), "/* Ich war's\nnochmal! */\n", 'Set copyright' );
     $packer->copyright( '' );
     is( $packer->copyright(), '', 'Reset copyright' );
+
+    my $str = '';
+
+    $packer->minify( \$str, {} );
+
+    ok( ! $packer->no_compress_comment(), 'Default value for no_compress_comment is still set.' );
+    is( $packer->compress(), 'clean', 'Default value for compress is still set.' );
+
+    $packer->minify(
+        \$str,
+        {
+            compress            => 'shrink',
+            no_compress_comment => 1,
+        }
+    );
+
+    ok( $packer->no_compress_comment(), 'Set no_compress_comment again.' );
+    is( $packer->compress(), 'shrink', 'Set compress to "minify" again.' );
 }

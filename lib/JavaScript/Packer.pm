@@ -8,7 +8,7 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = '1.003_002';
+our $VERSION = '1.003_003';
 
 our @BOOLEAN_ACCESSORS = (
     'no_compress_comment',
@@ -431,8 +431,9 @@ sub minify {
             $self->$field( $opts->{$field} ) if ( defined( $opts->{$field} ) );
         }
 
-        $self->compress( $opts->{compress} ) if ( defined( $opts->{compress} ) );
-        $self->copyright( $opts->{copyright} ) if ( defined( $opts->{copyright} ) );
+        foreach my $field ( 'compress', 'copyright' ) {
+            $self->$field( $opts->{$field} ) if ( defined( $opts->{$field} ) );
+        }
     }
 
     my $copyright_comment = '';
@@ -786,7 +787,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 1.003_002
+Version 1.003_003
 
 =head1 DESCRIPTION
 
@@ -827,11 +828,9 @@ Default value is 'clean'.
 is recommended because especially when compressing short scripts the result
 will exceed the input if compression level is 'obfuscate'.
 
-For backward compatibility 'minify' and 'base62' will still work.
-
 =item copyright
 
-You can add a copyright notice on top of the script.
+You can add a copyright notice at the top of the script.
 
 =item remove_copyright
 
@@ -848,8 +847,6 @@ prevents the input being packed or defines a compression level.
 
     /* JavaScript::Packer _no_compress_ */
     /* JavaScript::Packer shrink */
-
-Is set by default.
 
 =back
 
