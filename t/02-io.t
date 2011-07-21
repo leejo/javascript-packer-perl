@@ -8,7 +8,7 @@
 
 use Test::More;
 
-my $not = 19;
+my $not = 20;
 
 SKIP: {
     eval( 'use JavaScript::Packer' );
@@ -71,6 +71,9 @@ SKIP: {
     $packer->minify( \$var, { no_compress_comment => 1 } );
     is( $var, "var x=1;var y=2;", '_no_compress_ comment with no_compress_comment option');
 
+    $var = "var foo = \"foo\" + \"bar\" + \"baz\" + 'foo' + 'bar' + 'baz' + \"foo\" + \"bar\" + \"baz\";";
+    $packer->minify( \$var );
+    is( $var, "var foo=\"foobarbaz\"+'foobarbaz'+\"foobarbaz\";", 'concat');
 }
 
 sub filesMatch {

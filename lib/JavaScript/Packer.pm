@@ -8,7 +8,7 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = '1.004';
+our $VERSION = '1.005_001';
 
 our @BOOLEAN_ACCESSORS = (
     'no_compress_comment',
@@ -80,12 +80,10 @@ our $COMMENTS = [
         replacement => ''
     },
     {
-        regexp      => $DICTIONARY->{COMMENT1} . '\s*(' . $DICTIONARY->{REGEXP} . ')?',
-        replacement => sub { return sprintf( "\n%s", $_[0]->{submatches}->[2] ); }
+        regexp      => $DICTIONARY->{COMMENT1} . '\s*(' . $DICTIONARY->{REGEXP} . ')?'
     },
     {
-        regexp      => '(' . $DICTIONARY->{COMMENT2} . ')\s*(' . $DICTIONARY->{REGEXP} . ')?',
-        replacement => sub { return sprintf( " %s", $_[0]->{submatches}->[1] ); }
+        regexp      => '(' . $DICTIONARY->{COMMENT2} . ')\s*(' . $DICTIONARY->{REGEXP} . ')?'
     }
 ];
 
@@ -239,114 +237,47 @@ sub init {
 
     bless( $self, $class );
 
-    map {
-        my $what = $_;
+    @{$self->{clean}->{reggrp_data}}        = ( @$DATA, @$CLEAN );
+    @{$self->{whitespace}->{reggrp_data}}   = ( @$DATA[ 0, 1, 3 ], @$WHITESPACE );
+    $self->{trim}->{reggrp_data}            = $TRIM;
 
-        map {
-            push(
-                @{$self->{$what}->{reggrp_data}},
-                {
-                    regexp      => $_->{regexp},
-                    replacement => $_->{replacement}
-                }
-            );
-        } @$DATA;
-
-        if ( $what eq 'comments' ) {
-            map {
-                push(
-                    @{$self->{comments}->{reggrp_data}},
-                    {
-                        regexp      => $_->{regexp},
-                        replacement => $_->{replacement}
-                    }
-                );
-            } @$COMMENTS;
+    @{$self->{data_store}->{reggrp_data}}   = map {
+        {
+            regexp  => $_->{regexp},
+            store   => sub { return sprintf( "%s", $_[0]->{match} ); }
         }
-        elsif ( $what eq 'clean' ) {
-            map {
-                push(
-                    @{$self->{clean}->{reggrp_data}},
-                    {
-                        regexp      => $_->{regexp},
-                        replacement => $_->{replacement}
-                    }
-                );
-            } @$CLEAN;
-        }
-        elsif ( $what eq 'whitespace' ) {
-            map {
-                push(
-                    @{$self->{whitespace}->{reggrp_data}},
-                    {
-                        regexp      => $_->{regexp},
-                        replacement => $_->{replacement}
-                    }
-                );
-            } @$WHITESPACE;
-        }
-    } ( 'comments', 'clean', 'whitespace', 'concat' );
-
-    splice( @{$self->{comments}->{reggrp_data}}, 2, 1 );
-    splice( @{$self->{whitespace}->{reggrp_data}}, 2, 1 );
-    splice( @{$self->{concat}->{reggrp_data}}, 2, 1 );
-
-    map {
-        push(
-            @{$self->{data_store}->{reggrp_data}},
-            {
-                regexp  => $_->{regexp},
-                store   => sub { return sprintf( "%s", $_[0]->{match} ); }
-            }
-        );
     } @$DATA;
 
-    for ( my $i = 1; $i >= 0; $i-- ) {
-        unshift(
-            @{$self->{concat}->{reggrp_data}},
-            {
-                regexp => $DATA->[$i]->{regexp}
-            }
-        );
-        unshift(
-            @{$self->{concat}->{reggrp_data}},
-            {
-                regexp      => '(' . $DATA->[$i]->{regexp} . ')((?:\+' . $DATA->[$i]->{regexp} . ')+)',
-                replacement => sub {
-                    my $submatches = $_[0]->{submatches};
-                    my $ret = $submatches->[0];
+    $self->{data_store}->{reggrp_data}->[-1]->{replacement} = sub {
+        return sprintf( "%s\x01%d\x01", $_[0]->{submatches}->[0], $_[0]->{store_index} );
+    };
 
-                    my $next_str = '^\+(' . $DATA->[0]->{regexp} . '|' . $DATA->[1]->{regexp} . ')';
+    $self->{data_store}->{reggrp_data}->[-1]->{store} = sub {
+        return $_[0]->{submatches}->[1];
+    };
 
-                    while ( my ( $next ) = $submatches->[1] =~ /$next_str/ ) {
-                        chop( $ret );
-                        $ret .= substr( $next, 1 );
-                        $submatches->[1] =~ s/$next_str//;
-                    }
-
-                    return $ret;
-                }
-            }
-        );
-    }
-
-    push(
-        @{$self->{concat}->{reggrp_data}},
+    @{$self->{concat}->{reggrp_data}}       = map {
+        my $data = $_;
         {
-            regexp      => $DATA->[3]->{regexp},
-            replacement => $DATA->[3]->{replacement}
-        }
-    );
+            regexp      => '(' . $data->{regexp} . ')((?:\+' . $data->{regexp} . ')+)',
+            replacement => sub {
+                my $submatches = $_[0]->{submatches};
+                my $ret = $submatches->[0];
 
-    map {
-        push(
-            @{$self->{trim}->{reggrp_data}},
-            {
-                regexp      => $_->{regexp},
-                replacement => $_->{replacement}
+                my $next_str = '^\+(' . $data->{regexp} . ')';
+
+                while ( my ( $next ) = $submatches->[1] =~ /$next_str/ ) {
+                    chop( $ret );
+                    $ret .= substr( $next, 1 );
+                    $submatches->[1] =~ s/$next_str//;
+                }
+
+                return $ret;
             }
-        );
-    } @$TRIM;
+        };
+    } @$DATA[ 0, 1 ];
+
+    @{$self->{comments}->{reggrp_data}}     = ( @$DATA[ 0, 1, 3 ], @$COMMENTS );
 
     $self->{comments}->{reggrp_data}->[-2]->{replacement} = sub {
         my $submatches = $_[0]->{submatches};
@@ -374,17 +305,9 @@ sub init {
         return sprintf( " %s", $submatches->[1] );
     };
 
-    $self->{data_store}->{reggrp_data}->[-1]->{replacement} = sub {
-        return sprintf( "%s\x01%d\x01", $_[0]->{submatches}->[0], $_[0]->{store_index} );
-    };
-
-    $self->{data_store}->{reggrp_data}->[-1]->{store} = sub {
-        return $_[0]->{submatches}->[1];
-    };
-
-    map {
+    foreach ( @REGGRPS ) {
         $self->{ '_reggrp_' . $_ } = Regexp::RegGrp->new( { reggrp => $self->{$_}->{reggrp_data} } );
-    } @REGGRPS;
+    }
 
     $self->{block_data} = [];
 
@@ -497,14 +420,9 @@ sub minify {
 
         my $idx = 0;
 
-        map {
-            if ( exists( $words->{$_} ) ) {
-                $words->{$_}->{count}++;
-            }
-            else {
-                $words->{$_}->{count} = 1;
-            }
-        } @words;
+        foreach ( @words ) {
+            $words->{$_}->{count}++;
+        }
 
         WORD: foreach my $word ( sort { $words->{$b}->{count} <=> $words->{$a}->{count} } keys( %{$words} ) ) {
 
@@ -645,9 +563,10 @@ sub minify {
         $packed_length += length( $BASE62_VARS->{UNPACK} );
         $packed_length -= ( $BASE62_VARS->{UNPACK} =~ s/(%s|%d)/$1/g ) * 2;
 
-        map {
+        my ( @length_matches ) = ${$javascript} =~ s/((?>[\r\n]+))/$1/g;
+        foreach ( @length_matches ) {
             $packed_length -= length( $_ ) - 3;
-        } ${$javascript} =~ s/((?>[\r\n]+))/$1/g;
+        }
 
         $packed_length += ${$javascript} =~ tr/\\\'/\\\'/;
 
@@ -787,7 +706,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 1.004
+Version 1.005_001
 
 =head1 DESCRIPTION
 
