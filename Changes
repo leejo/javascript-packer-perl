@@ -1,5 +1,8 @@
 Revision history for JavaScript-Packer
 
+1.006   2011-09-26
+    - Raised version number.
+
 1.005_001   2011-07-22
     - Replaced some map with foreach.
     - Some cleanups.
