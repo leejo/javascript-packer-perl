@@ -8,7 +8,7 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = '1.006';
+our $VERSION = '1.006001';
 
 our @BOOLEAN_ACCESSORS = (
     'no_compress_comment',
@@ -706,7 +706,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 1.006
+Version 1.006001
 
 =head1 DESCRIPTION
 
