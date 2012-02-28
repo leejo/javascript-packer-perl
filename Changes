@@ -1,5 +1,9 @@
 Revision history for JavaScript-Packer
 
+1.006002    2012-02-28
+    - This release fixes issue #2.
+    - Fixed bug in handling regular expressions when shrink is used. Thanks to Colin Kuskie for reporting this issue and writing tests.
+
 1.006001    2012-02-19
     - Use gnutar to build distribution.
 

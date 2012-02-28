@@ -8,7 +8,7 @@
 
 use Test::More;
 
-my $not = 20;
+my $not = 28;
 
 SKIP: {
     eval( 'use JavaScript::Packer' );
@@ -74,6 +74,39 @@ SKIP: {
     $var = "var foo = \"foo\" + \"bar\" + \"baz\" + 'foo' + 'bar' + 'baz' + \"foo\" + \"bar\" + \"baz\";";
     $packer->minify( \$var );
     is( $var, "var foo=\"foobarbaz\"+'foobarbaz'+\"foobarbaz\";", 'concat');
+
+    $var = "!/foo/";
+    $packer->minify( \$var );
+    is( $var, "!/foo/", 'regexp preceeded by negation');
+
+    $var = "!/foo/";
+    JavaScript::Packer::minify( \$var );
+    is( $var, "!/foo/", 'regexp preceeded by negation, subroutine invocation');
+
+    $var = "!/foo/";
+    $packer->minify( \$var, { compress => 'shrink', } );
+    is( $var, "!/foo/", 'regexp preceeded by negation, with shrink');
+
+    $var = "!/foo/";
+    JavaScript::Packer::minify( \$var, { compress => 'shrink', } );
+    is( $var, "!/foo/", 'regexp preceeded by negation, with shrink, subroutine invocation');
+
+    $var = "var foo = /bar/;";
+    JavaScript::Packer::minify( \$var);
+    is( $var, "var foo=/bar/;", 'building Regexp object implictly');
+
+    $var = "var foo = /bar/;";
+    JavaScript::Packer::minify( \$var, { compress => 'shrink', } );
+    is( $var, "var foo=/bar/;", 'building Regexp object implictly with shrink');
+
+    $var = q~var foo = new RegExp("bar");~;
+    JavaScript::Packer::minify( \$var);
+    is( $var, q~var foo=new RegExp("bar");~, 'building Regexp object explictly');
+
+    $var = q~var foo = new RegExp("bar");~;
+    JavaScript::Packer::minify( \$var);
+    JavaScript::Packer::minify( \$var, { compress => 'shrink', } );
+    is( $var, q~var foo=new RegExp("bar");~, 'building Regexp object explictly with shrink');
 }
 
 sub filesMatch {

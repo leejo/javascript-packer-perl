@@ -8,7 +8,7 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = '1.006001';
+our $VERSION = '1.006002';
 
 our @BOOLEAN_ACCESSORS = (
     'no_compress_comment',
@@ -241,10 +241,13 @@ sub init {
     @{$self->{whitespace}->{reggrp_data}}   = ( @$DATA[ 0, 1, 3 ], @$WHITESPACE );
     $self->{trim}->{reggrp_data}            = $TRIM;
 
-    @{$self->{data_store}->{reggrp_data}}   = map {
+    @{ $self->{data_store}->{reggrp_data} } = map {
         {
-            regexp  => $_->{regexp},
-            store   => sub { return sprintf( "%s", $_[0]->{match} ); }
+            regexp      => $_->{regexp},
+            store       => sub { return sprintf( "%s", $_[0]->{match} ); },
+            replacement => sub {
+                return sprintf( "\x01%d\x01", $_[0]->{store_index} );
+            },
         }
     } @$DATA;
 
@@ -305,8 +308,12 @@ sub init {
         return sprintf( " %s", $submatches->[1] );
     };
 
-    foreach ( @REGGRPS ) {
-        $self->{ '_reggrp_' . $_ } = Regexp::RegGrp->new( { reggrp => $self->{$_}->{reggrp_data} } );
+    foreach my $reggrp ( @REGGRPS ) {
+        my $reggrp_args = { reggrp => $self->{$reggrp}->{reggrp_data} };
+
+        $reggrp_args->{restore_pattern} = qr~\x01(\d+)\x01~ if ( $reggrp eq 'data_store' );
+
+        $self->{ '_reggrp_' . $reggrp } = Regexp::RegGrp->new( $reggrp_args );
     }
 
     $self->{block_data} = [];
@@ -706,7 +713,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 1.006001
+Version 1.006002
 
 =head1 DESCRIPTION
 
@@ -841,7 +848,7 @@ perldoc JavaScript::Packer
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2008 - 2011 Merten Falk, all rights reserved.
+Copyright 2008 - 2012 Merten Falk, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
