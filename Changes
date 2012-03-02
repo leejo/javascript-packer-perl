@@ -1,5 +1,11 @@
 Revision history for JavaScript-Packer
 
+1.006003    2012-03-02
+    - This release fixes issue #1.
+    - Added additional concat tests.
+    - Fixed bug in string concatenation. Thanks to Nigel Horne for reporting this issue.
+    - Tidied up.
+
 1.006002    2012-02-28
     - This release fixes issue #2.
     - Fixed bug in handling regular expressions when shrink is used. Thanks to Colin Kuskie for reporting this issue and writing tests.
