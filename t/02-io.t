@@ -25,7 +25,7 @@ SKIP: {
     fileTest( 's7',  'clean',     'compression level "clean" function as argument' );
     fileTest( 's8',  'shrink',    'compression level "shrink" function as argument' );
     fileTest( 's9',  'shrink',    'compression level "shrink" with _no_shrink_ argument' );
-    fileTest( 's10', 'shrink',    'compression level "shrink" with qouted args' );
+    fileTest( 's10', 'shrink',    'compression level "shrink" with quoted args' );
 
     my $packer = JavaScript::Packer->init();
 
@@ -52,7 +52,7 @@ SKIP: {
     is(
         $var,
         '/* BSD */'
-            . "\neval(function(p,a,c,k,e,r){e=String;if('0'.replace(0,e)==0){while(c--)r[e(c)]=k[c];k=[function(e){return r[e]||e}];e=function(){return'[01]'};c=1};while(c--)if(k[c])p=p.replace(new RegExp('\\\\b'+e(c)+'\\\\b','g'),k[c]);return p}('0 1=2;',[],2,'var|x'.split('|'),0,{}))",
+            . "\neval(function(p,a,c,k,e,r){e=String;if('0'.replace(0,e)==0){while(c--)r[e(c)]=k[c];k=[function(e){return r[e]||e}];e=function(){return'[01]'};c=1};while(c--)if(k[c])p=p.replace(new RegExp('\\\\b'+e(c)+'\\\\b','g'),k[c]);return p}('1 0=2;',[],2,'x|var'.split('|'),0,{}))",
         'copyright option compression level "obfuscate"'
     );
 

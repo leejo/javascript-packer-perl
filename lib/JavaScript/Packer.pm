@@ -413,7 +413,7 @@ sub minify {
         my %shrunk_vars = map { $_ => 1 } ( ${$javascript} =~ /$SHRINK_VARS->{SHRUNK}/g );
 
         my $cnt = 0;
-        foreach my $shrunk_var ( keys( %shrunk_vars ) ) {
+        foreach my $shrunk_var ( sort keys( %shrunk_vars ) ) {
             my $short_id;
             do {
                 $short_id = $self->_encode52( $cnt++ );
@@ -438,7 +438,7 @@ sub minify {
             $words->{$_}->{count}++;
         }
 
-        WORD: foreach my $word ( sort { $words->{$b}->{count} <=> $words->{$a}->{count} } keys( %{$words} ) ) {
+        WORD: foreach my $word ( sort { $words->{$b}->{count} <=> $words->{$a}->{count} } sort keys( %{$words} ) ) {
 
             if ( exists( $words->{$word}->{encoded} ) and $words->{$word}->{encoded} eq $word ) {
                 next WORD;
@@ -473,7 +473,7 @@ sub minify {
 
         my ( @pk, @pattern ) = ( (), () );
 
-        foreach ( sort { $words->{$a}->{index} <=> $words->{$b}->{index} } keys( %{$words} ) ) {
+        foreach ( sort { $words->{$a}->{index} <=> $words->{$b}->{index} } sort keys( %{$words} ) ) {
             $packed_length -= ( $words->{$_}->{count} * $words->{$_}->{minus} );
 
             if ( $words->{$_}->{encoded} ne $_ ) {
@@ -645,7 +645,7 @@ sub _store_block_data {
         if ( $do_shrink ) {
 
             my $cnt = 0;
-            foreach my $block_var ( keys( %block_vars ) ) {
+            foreach my $block_var ( sort keys( %block_vars ) ) {
                 if ( length( $block_var ) ) {
                     while ( $block =~ /$SHRINK_VARS->{PREFIX}\Q$cnt\E\b/ ) {
                         $cnt++;
