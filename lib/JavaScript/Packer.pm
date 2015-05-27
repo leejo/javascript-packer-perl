@@ -8,7 +8,7 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = '1.006003';
+our $VERSION = 2.00;
 
 our @BOOLEAN_ACCESSORS = ( 'no_compress_comment', 'remove_copyright' );
 
@@ -297,7 +297,7 @@ sub init {
             $self->reggrp_clean()->exec( \$submatches->[1] );
             $self->reggrp_whitespace()->exec( \$submatches->[1] );
 
-            return sprintf( "//%s%s\n%s", @{$submatches} );
+            return sprintf( "//%s%s\n%s", @{$submatches}[0 .. 2] );
         }
         return sprintf( "\n%s", $submatches->[2] );
     };
@@ -712,9 +712,13 @@ __END__
 
 JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
+=for html
+<a href='https://travis-ci.org/leejo/javascript-packer-perl?branch=master'><img src='https://travis-ci.org/leejo/javascript-packer-perl.svg?branch=master' alt='Build Status' /></a>
+<a href='https://coveralls.io/r/leejo/javascript-packer-perl'><img src='https://coveralls.io/repos/leejo/javascript-packer-perl/badge.png?branch=master' alt='Coverage Status' /></a>
+
 =head1 VERSION
 
-Version 1.006003
+Version 2.00
 
 =head1 DESCRIPTION
 
@@ -833,12 +837,13 @@ A scalar is requested by the context. The input will remain unchanged.
 
 =head1 AUTHOR
 
-Merten Falk, C<< <nevesenin at cpan.org> >>
+Merten Falk, C<< <nevesenin at cpan.org> >>. Now maintained by Lee
+Johnson (LEEJO)
 
 =head1 BUGS
 
 Please report any bugs or feature requests through the web interface at
-L<http://github.com/nevesenin/javascript-packer-perl/issues>.
+L<http://github.com/leejo/javascript-packer-perl/issues>.
 
 =head1 SUPPORT
 

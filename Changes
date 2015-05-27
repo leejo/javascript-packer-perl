@@ -1,5 +1,14 @@
 Revision history for JavaScript-Packer
 
+2.00        2015-05-27
+    - New maintainer: LEEJO
+    - Merge PR from dod38fr (nevesenin/javascript-packer-perl:GH #8, nevesenin/javascript-packer-perl:GH #9)
+    - Fix "Redundant argument in sprintf" against perl 5.22
+    - Repoint issue tracker/repo at leejo's fork
+    - Add .travis.yml for CI goodness
+    - Add Changes test
+    - Add MYMETA.json to .gitignore
+
 1.006003    2012-03-02
     - This release fixes issue #1.
     - Added additional concat tests.

@@ -7,8 +7,8 @@ all_from        'lib/JavaScript/Packer.pm';
 test_requires   'Test::More'        => 0;
 requires        'Regexp::RegGrp'    => "1.001_001";
 
-repository 'http://github.com/nevesenin/javascript-packer-perl';
-bugtracker 'http://github.com/nevesenin/javascript-packer-perl/issues';
+repository 'http://github.com/leejo/javascript-packer-perl';
+bugtracker 'http://github.com/leejo/javascript-packer-perl/issues';
 
 clean_files 't/scripts/s*-got.js';
 
