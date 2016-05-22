@@ -15,11 +15,11 @@ inc/Module/Install/WriteAll.pm
 lib/JavaScript/Packer.pm
 Makefile.PL
 MANIFEST
-META.yml
 README
 t/00-load.t
 t/01-interface.t
 t/02-io.t
+t/03-leaks.t
 t/pod.t
 t/scripts/s1-expected.js
 t/scripts/s1.js

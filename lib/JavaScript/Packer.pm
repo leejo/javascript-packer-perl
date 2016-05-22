@@ -8,7 +8,7 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = "2.00";
+our $VERSION = "2.01";
 
 our @BOOLEAN_ACCESSORS = ( 'no_compress_comment', 'remove_copyright' );
 
@@ -215,6 +215,14 @@ sub compress {
     return $self->{_compress};
 }
 
+# these variables are used in the closures defined in the init function
+# below - we have to use globals as using $self within the closures leads
+# to a reference cycle and thus memory leak, and we can't scope them to
+# the init method as they may change. they are set by the minify sub
+our $reggrp_comments;
+our $reggrp_clean;
+our $reggrp_whitespace;
+
 sub init {
     my $class = shift;
     my $self  = {};
@@ -293,9 +301,9 @@ sub init {
     $self->{comments}->{reggrp_data}->[-2]->{replacement} = sub {
         my $submatches = $_[0]->{submatches};
         if ( $submatches->[0] eq '@' ) {
-            $self->reggrp_comments()->exec( \$submatches->[1] );
-            $self->reggrp_clean()->exec( \$submatches->[1] );
-            $self->reggrp_whitespace()->exec( \$submatches->[1] );
+            $reggrp_comments->exec( \$submatches->[1] );
+            $reggrp_clean->exec( \$submatches->[1] );
+            $reggrp_whitespace->exec( \$submatches->[1] );
 
             return sprintf( "//%s%s\n%s", @{$submatches}[0 .. 2] );
         }
@@ -307,9 +315,9 @@ sub init {
         if ( $submatches->[0] =~ /^\/\*\@(.*)\@\*\/$/sm ) {
             my $cmnt = $1;
 
-            $self->reggrp_comments()->exec( \$cmnt );
-            $self->reggrp_clean()->exec( \$cmnt );
-            $self->reggrp_whitespace()->exec( \$cmnt );
+            $reggrp_comments->exec( \$cmnt );
+            $reggrp_clean->exec( \$cmnt );
+            $reggrp_whitespace->exec( \$cmnt );
 
             return sprintf( '/*@%s@*/ %s', $cmnt, $submatches->[1] );
         }
@@ -372,6 +380,11 @@ sub minify {
             $self->$field( $opts->{$field} ) if ( defined( $opts->{$field} ) );
         }
     }
+
+	# (re)initialize variables used in the closures
+	$reggrp_comments = $self->reggrp_comments;
+	$reggrp_clean = $self->reggrp_clean;
+	$reggrp_whitespace = $self->reggrp_whitespace;
 
     my $copyright_comment = '';
 
@@ -718,7 +731,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 2.00
+Version 2.01
 
 =head1 DESCRIPTION
 

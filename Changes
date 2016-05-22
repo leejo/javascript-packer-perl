@@ -1,5 +1,8 @@
 Revision history for JavaScript-Packer
 
+2.01        2016-06-22
+    - Fix refrence cycles in ->init method causing memory leaks (GH #1)
+
 2.00        2015-05-27
     - New maintainer: LEEJO
     - Merge PR from dod38fr (nevesenin/javascript-packer-perl:GH #8, nevesenin/javascript-packer-perl:GH #9)
