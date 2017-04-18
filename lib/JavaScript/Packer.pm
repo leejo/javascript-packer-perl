@@ -8,7 +8,7 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = "2.02";
+our $VERSION = "2.03";
 
 our @BOOLEAN_ACCESSORS = ( 'no_compress_comment', 'remove_copyright' );
 

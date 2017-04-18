@@ -1,5 +1,8 @@
 Revision history for JavaScript-Packer
 
+2.03       2017-04-18
+    - Makefile.PL moved to ExtUtils::MakeMaker to fix no . in @INC (perl 5.25.11+)
+
 2.01        2016-06-22
     - Fix refrence cycles in ->init method causing memory leaks (GH #1)
 
