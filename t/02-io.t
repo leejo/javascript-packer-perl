@@ -7,6 +7,7 @@
 # =========================================================================== #
 
 use Test::More;
+use Test::File::Contents;
 
 my $not = 30;
 
@@ -26,6 +27,7 @@ SKIP: {
     fileTest( 's8',  'shrink',    'compression level "shrink" function as argument' );
     fileTest( 's9',  'shrink',    'compression level "shrink" with _no_shrink_ argument' );
     fileTest( 's10', 'shrink',    'compression level "shrink" with quoted args' );
+    fileTest( 's11', 'shrink',    'compression level "shrink" with associative array' );
 
     my $packer = JavaScript::Packer->init();
 
@@ -122,30 +124,6 @@ SKIP: {
     is( $var, q~var foo=new RegExp("bar");~, 'building Regexp object explictly with shrink' );
 }
 
-sub filesMatch {
-    my $file1 = shift;
-    my $file2 = shift;
-    my $a;
-    my $b;
-
-    while ( 1 ) {
-        $a = getc( $file1 );
-        $b = getc( $file2 );
-
-        if ( !defined( $a ) && !defined( $b ) ) {    # both files end at same place
-            return 1;
-        }
-        elsif (
-            !defined( $b ) ||                        # file2 ends first
-            !defined( $a ) ||                        # file1 ends first
-            $a ne $b
-            )
-        {                                            # a and b not the same
-            return 0;
-        }
-    }
-}
-
 sub fileTest {
     my $filename = shift;
     my $compress = shift || 'minify';
@@ -163,9 +141,11 @@ sub fileTest {
     close( INFILE );
     close( GOTFILE );
 
-    open( EXPECTEDFILE, 't/scripts/' . $filename . '-expected.js' ) or die( "couldn't open file" );
-    open( GOTFILE,      't/scripts/' . $filename . '-got.js' )      or die( "couldn't open file" );
-    ok( filesMatch( GOTFILE, EXPECTEDFILE ), $comment );
-    close( EXPECTEDFILE );
-    close( GOTFILE );
+	files_eq_or_diff(
+		't/scripts/' . $filename . '-got.js',
+		't/scripts/' . $filename . '-expected.js',
+		{ style => 'Unified' }
+	);
+
+	return;
 }
