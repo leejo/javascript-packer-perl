@@ -10,7 +10,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 # VERSION
 
-Version 2.01
+Version 2.04
 
 # DESCRIPTION
 
@@ -124,7 +124,10 @@ Second argument must be a hashref of options. Possible options are:
 Merten Falk, `<nevesenin at cpan.org>`. Now maintained by Lee
 Johnson (LEEJO)
 
-# BUGS
+# BUGS AND CAVEATS
+
+This module will break code that relies on ASI, see [https://github.com/leejo/javascript-packer-perl/issues/5](https://github.com/leejo/javascript-packer-perl/issues/5)
+for more information.
 
 Please report any bugs or feature requests through the web interface at
 [http://github.com/leejo/javascript-packer-perl/issues](http://github.com/leejo/javascript-packer-perl/issues).
