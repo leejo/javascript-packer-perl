@@ -8,7 +8,7 @@ use Regexp::RegGrp;
 
 # =========================================================================== #
 
-our $VERSION = "2.03";
+our $VERSION = "2.04";
 
 our @BOOLEAN_ACCESSORS = ( 'no_compress_comment', 'remove_copyright' );
 
@@ -23,16 +23,19 @@ our $COPYRIGHT_COMMENT = '\/\*((?>[^\*]|\*[^\/])*copyright(?>[^\*]|\*[^\/])*)\*\
 our $RESTORE_PATTERN     = qr~\x01(\d+)\x01~;
 our $RESTORE_REPLACEMENT = "\x01%d\x01";
 
+our $MISSING_SEMICOLON  = qr/(\)\([^\(\)]*\))([^;\.\),\]\}])/;
+
 our $SHRINK_VARS = {
-    BLOCK         => qr/(((catch|do|if|while|with|function)\b[^~{};]*(\(\s*[^{};]*\s*\))\s*)?(\{[^{}]*\}))/,    # function ( arg ) { ... }
-    ENCODED_BLOCK => qr/~#?(\d+)~/,
-    CALLER     => qr/((?>[a-zA-Z0-9_\x24\.]+)\s*\([^\(\)]*\))(?=[,\)])/,    # do_something( arg1, arg2 ) as argument of another function call
-    BRACKETS   => qr/\{[^{}]*\}|\[[^\[\]]*\]|\([^\(\)]*\)|~[^~]+~/,
-    IDENTIFIER => qr~[a-zA-Z_\x24][a-zA-Z_0-9\\x24]*~,
-    SCOPED     => qr/~#(\d+)~/,
-    VARS       => qr~\b(?:var|function)\s+((?>[a-zA-Z0-9_\x24]+))~,         # var x, funktion blah
-    PREFIX     => qr~\x02~,
-    SHRUNK     => qr~\x02\d+\b~
+    BLOCK           => qr/(((catch|do|if|while|with|function)\b[^~{};]*(\(\s*[^{};]*\s*\))\s*)?(\{[^{}]*\}))/,    # function ( arg ) { ... }
+    ENCODED_DATA    => qr~\x01(\d+)\x01~,
+    ENCODED_CALLER  => qr/~%(\d+)%~/,
+    CALLER          => qr/((?>[a-zA-Z0-9_\x24\.]+)\s*\([^\(\)]*\))(?=[,\)])/,    # do_something( arg1, arg2 ) as argument of another function call
+    BRACKETS        => qr/\{[^{}]*\}|\[[^\[\]]*\]|\([^\(\)]*\)|~[^~]+~/,
+    IDENTIFIER      => qr~[a-zA-Z_\x24][a-zA-Z_0-9\\x24]*~,
+    SCOPED          => qr/~#(\d+)~/,
+    VARS            => qr~\b(?:var|function)\s+((?>[a-zA-Z0-9_\x24]+))~,         # var x, funktion blah
+    PREFIX          => qr~\x02~,
+    SHRUNK          => qr~\x02\d+\b~
 };
 
 our $BASE62_VARS = {
@@ -332,7 +335,8 @@ sub init {
         $self->{ '_reggrp_' . $reggrp } = Regexp::RegGrp->new( $reggrp_args );
     }
 
-    $self->{block_data} = [];
+    $self->{block_data}     = [];
+    $self->{caller_data}    = [];
 
     return $self;
 }
@@ -414,10 +418,28 @@ sub minify {
     $self->reggrp_concat()->exec( $javascript );
     $self->reggrp_concat_store()->restore_stored( $javascript );
 
-    if ( $self->compress() ne 'clean' ) {
-        $self->reggrp_data_store()->exec( $javascript );
+    # Do something about the missing semicolon.
+	# see https://github.com/leejo/javascript-packer-perl/issues/5
+	# and 664f8365937447983f79669af7bed8e918d85c70
 
-        while ( ${$javascript} =~ /$SHRINK_VARS->{BLOCK}/ ) {
+    $self->{data_store}->{reggrp}->exec( $javascript );
+
+    while( ${$javascript} =~ /$SHRINK_VARS->{CALLER}/ ) {
+        ${$javascript} =~ s/$SHRINK_VARS->{CALLER}/$self->_store_caller_data( $1 )/egsm;
+    }
+
+    ${$javascript} =~ s/$MISSING_SEMICOLON/sprintf( '%s;%s', $1, $2 )/egsm;
+
+    $self->_restore_data( $javascript, 'caller_data', $SHRINK_VARS->{ENCODED_CALLER} );
+
+    $self->{data_store}->{reggrp}->restore_stored( $javascript );
+
+    # end of missing semicolon fix
+
+    if ( $opts->{compress} ne 'clean' ) {
+        $self->{data_store}->{reggrp}->exec( $javascript );
+
+        while( ${$javascript} =~ /$SHRINK_VARS->{BLOCK}/ ) {
             ${$javascript} =~ s/$SHRINK_VARS->{BLOCK}/$self->_store_block_data( $1 )/egsm;
         }
 
@@ -621,6 +643,16 @@ sub _restore_data {
     }
 }
 
+sub _store_caller_data {
+    my ( $self, $match ) = @_;
+
+    my $replacement = sprintf( "~%%%d%%~", scalar( @{$self->{caller_data}} ) );
+
+    push( @{$self->{caller_data}}, $match );
+
+    return $replacement;
+}
+
 sub _store_block_data {
     my ( $self, $match ) = @_;
 
@@ -731,7 +763,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 =head1 VERSION
 
-Version 2.02
+Version 2.04
 
 =head1 DESCRIPTION
 

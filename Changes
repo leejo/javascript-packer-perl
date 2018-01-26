@@ -1,5 +1,8 @@
 Revision history for JavaScript-Packer
 
+2.04       2018-01-26
+    - Reverted the removal of the "ridiculous" missing semicolon fix (GH #5)
+
 2.03       2017-04-18
     - Makefile.PL moved to ExtUtils::MakeMaker to fix no . in @INC (perl 5.25.11+)
 
