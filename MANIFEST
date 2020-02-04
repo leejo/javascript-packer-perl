@@ -26,3 +26,5 @@ t/scripts/s9-expected.js
 t/scripts/s9.js
 t/scripts/s10-expected.js
 t/scripts/s10.js
+t/scripts/s11-expected.js
+t/scripts/s11.js

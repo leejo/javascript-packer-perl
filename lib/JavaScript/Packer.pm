@@ -542,7 +542,7 @@ sub minify {
                     }
                 }
                 elsif ( $ord == 57 ) {
-                    $pd .= '0-9';
+                    $pd .= '[0-9]';
                 }
                 elsif ( $ord == 50 ) {
                     $pd .= '[12]';
