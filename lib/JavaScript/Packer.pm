@@ -538,6 +538,9 @@ sub minify {
                         elsif ( $ord > 65 ) {
                             $pd .= '-zA-' . $c;
                         }
+                        elsif ( $ord == 65 ) {
+                            $pd .= '-zA';
+                        }
                         $pd .= ']';
                     }
                 }
