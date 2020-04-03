@@ -10,7 +10,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 # VERSION
 
-Version 2.05
+Version 2.06
 
 # DESCRIPTION
 
