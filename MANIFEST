@@ -42,3 +42,5 @@ t/scripts/s17-expected.js
 t/scripts/s17.js
 t/scripts/s18-expected.js
 t/scripts/s18.js
+t/scripts/s19-expected.js
+t/scripts/s19.js
