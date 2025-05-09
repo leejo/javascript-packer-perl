@@ -10,7 +10,7 @@ JavaScript::Packer - Perl version of Dean Edwards' Packer.js
 
 # VERSION
 
-Version 2.09
+Version 2.12
 
 # DESCRIPTION
 
@@ -128,6 +128,9 @@ Johnson (LEEJO)
 
 This module will break code that relies on ASI, see [https://github.com/leejo/javascript-packer-perl/issues/5](https://github.com/leejo/javascript-packer-perl/issues/5)
 for more information.
+
+This module uses regular expressions to parse the JavaScript so is prone
+to bugs and edge cases, especially when the JavaScript standard is updated
 
 Please report any bugs or feature requests through the web interface at
 [http://github.com/leejo/javascript-packer-perl/issues](http://github.com/leejo/javascript-packer-perl/issues).
